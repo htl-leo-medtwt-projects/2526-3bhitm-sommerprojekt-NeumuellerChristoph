@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>kartenfeed 🦎</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- GRAIN -->
+  <div class="grain"></div>
+
+  <!-- RING BACKGROUND -->
+  <div class="rings-bg" aria-hidden="true">
+    <div class="ring r1"></div>
+    <div class="ring r2"></div>
+    <div class="ring r3"></div>
+    <div class="ring r4"></div>
+    <div class="ring r5"></div>
+  </div>
+
+  <!-- OVERLAY -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- MAGIC MENU -->
+  <aside class="magic-menu" id="magicMenu" aria-hidden="true">
+    <div class="mm-header">
+      <span class="mm-title">🌿 entdecken</span>
+      <button class="mm-close" id="mmClose" aria-label="Menü schließen">×</button>
+    </div>
+
+    <div class="mm-section">
+      <p class="mm-section-label">sortierung</p>
+      <div class="mm-filters" id="mmFilters">
+        <button class="mm-filter active" data-filter="week">
+          <span class="mm-icon">🔥</span>
+          <span class="mm-filter-text">
+            <strong>Top 10 diese Woche</strong>
+            <em>meistgeschaut · 7 Tage</em>
+          </span>
+        </button>
+        <button class="mm-filter" data-filter="liked">
+          <span class="mm-icon">❤️</span>
+          <span class="mm-filter-text">
+            <strong>Meist geliked</strong>
+            <em>dieser Monat</em>
+          </span>
+        </button>
+        <button class="mm-filter" data-filter="comments">
+          <span class="mm-icon">💬</span>
+          <span class="mm-filter-text">
+            <strong>Meiste Kommentare</strong>
+            <em>dieser Monat</em>
+          </span>
+        </button>
+        <button class="mm-filter" data-filter="new">
+          <span class="mm-icon">✨</span>
+          <span class="mm-filter-text">
+            <strong>Neu & Frisch</strong>
+            <em>letzte 24 Stunden</em>
+          </span>
+        </button>
+        <button class="mm-filter" data-filter="foryou">
+          <span class="mm-icon">🗺️</span>
+          <span class="mm-filter-text">
+            <strong>Für dich</strong>
+            <em>personalisiert</em>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <div class="mm-divider"></div>
+
+    <div class="mm-section">
+      <p class="mm-section-label">themen</p>
+      <div class="mm-tags" id="mmTags">
+        <!-- Tags werden dynamisch aus den Kartendaten geladen -->
+      </div>
+    </div>
+
+    <div class="mm-axo">
+      <span class="mm-axo-emoji">🦎</span>
+      <p>Hallo! Ich bin <strong>Axl</strong>, dein Axolotl 🌸<br>
+        Ich erkläre dir jede Karte — gemütlich und ohne Stress.</p>
+    </div>
+  </aside>
+
+  <!-- ── NAV ── -->
+  <header class="topnav">
+    <div class="nav-logo">
+      <span class="nav-axo">🦎</span>
+      <span class="nav-wordmark">kartenfeed</span>
+    </div>
+    <div class="nav-right">
+      <button class="magic-btn" id="magicBtn" aria-label="Menü öffnen" title="Entdecken & Filter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+        </svg>
+      </button>
+      <div class="nav-avatar" aria-label="Profilbild">MK</div>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT -->
+  <div class="layout">
+
+    <!-- FEED -->
+    <main class="feed" id="feed" tabindex="0" aria-label="Kartenfeed">
+      <!-- cards injected by JS -->
+    </main>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="sidebar" aria-label="Aktionen">
+      <div class="sidebar-rings" aria-hidden="true">
+        <div class="sb-ring sb-ring-1"></div>
+        <div class="sb-ring sb-ring-2"></div>
+      </div>
+
+      <button class="sb-btn" id="likeBtn" aria-label="Like" title="Liken">
+        <svg class="sb-icon" id="likeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+        <span class="sb-count" id="likeCount">—</span>
+      </button>
+
+      <button class="sb-btn" id="commentBtn" aria-label="Kommentare" title="Kommentare">
+        <svg class="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span class="sb-count" id="commentCount">—</span>
+      </button>
+
+      <div class="sb-divider"></div>
+
+      <button class="sb-special" aria-label="Vollbild" title="Vollbild">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polyline points="15 3 21 3 21 9"/>
+          <polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/>
+          <line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      </button>
+
+      <div class="sb-divider"></div>
+
+      <button class="sb-btn" aria-label="Speichern" title="Speichern">
+        <svg class="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span class="sb-count">merken</span>
+      </button>
+    </aside>
+
+  </div>
+
+  <!-- COMMENT PANEL -->
+  <section class="comment-panel" id="commentPanel" aria-label="Kommentare" aria-hidden="true">
+    <div class="cp-header">
+      <h2 class="cp-title">Kommentare</h2>
+      <button class="cp-close" id="cpClose" aria-label="Schließen">×</button>
+    </div>
+    <div class="cp-list" id="cpList"></div>
+    <div class="cp-input-row">
+      <input class="cp-input" id="cpInput" type="text" placeholder="Schreib etwas schönes…" autocomplete="off">
+      <button class="cp-send" id="cpSend" aria-label="Senden">→</button>
+    </div>
+  </section>
+
+  <script src="data.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
