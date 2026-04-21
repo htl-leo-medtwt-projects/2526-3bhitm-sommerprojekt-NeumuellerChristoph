@@ -1,50 +1,45 @@
-// main.js — kartenfeed
-
-// STATE
-let currentIdx   = 0;
-let liked        = false;
+// GLOBALER ZUSTAND
+let currentIdx   = 0;      // index der aktuell sichtbaren karte im feed
+let liked        = false;  // ist die aktuelle karte geliked
 let commentOpen  = false;
 let menuOpen     = false;
-let axoTimers    = {};
-let axoShown     = {};
+let axoTimers    = {};     // laufende timer pro karten-id (für axl-verzögerung)
+let axoShown     = {};     // merkt sich welche karten axl schon gezeigt haben
 let activeFilter = 'week';
-let hiddenTags   = [];
+let hiddenTags   = [];     // tags die der user im menü ausgeblendet hat
 let feedObserver = null;
 
-// ELEMENTS
-const feed         = document.getElementById('feed');
-const likeBtn      = document.getElementById('likeBtn');
-const likeIcon     = document.getElementById('likeIcon');
-const likeCount    = document.getElementById('likeCount');
-const commentBtn   = document.getElementById('commentBtn');
-const commentCount = document.getElementById('commentCount');
-const commentPanel = document.getElementById('commentPanel');
-const cpList       = document.getElementById('cpList');
-const cpInput      = document.getElementById('cpInput');
-const cpSend       = document.getElementById('cpSend');
-const cpClose      = document.getElementById('cpClose');
-const magicBtn     = document.getElementById('magicBtn');
-const magicMenu    = document.getElementById('magicMenu');
-const mmClose      = document.getElementById('mmClose');
-const overlay      = document.getElementById('overlay');
-const mmFilters    = document.querySelectorAll('.mm-filter');
+// DOM ELEMENTE
+const feed            = document.getElementById('feed');
+const likeBtn         = document.getElementById('likeBtn');
+const likeIcon        = document.getElementById('likeIcon');
+const likeCount       = document.getElementById('likeCount');
+const commentBtn      = document.getElementById('commentBtn');
+const commentCount    = document.getElementById('commentCount');
+const commentPanel    = document.getElementById('commentPanel');
+const cpList          = document.getElementById('cpList');
+const cpInput         = document.getElementById('cpInput');
+const cpSend          = document.getElementById('cpSend');
+const cpClose         = document.getElementById('cpClose');
+const magicBtn        = document.getElementById('magicBtn');
+const magicMenu       = document.getElementById('magicMenu');
+const mmClose         = document.getElementById('mmClose');
+const overlay         = document.getElementById('overlay');
+const mmFilters       = document.querySelectorAll('.mm-filter');
 const mmTagsContainer = document.getElementById('mmTags');
+const fullscreenBtn   = document.querySelector('.sb-special');
 
 
 // TAG BUTTONS
+// liest alle tags aus den kartendaten, entfernt duplikate und baut daraus klickbare filter-buttons
 function buildTagButtons() {
   var tags = [];
-
   CARDS.forEach(function(c) {
-    if (tags.indexOf(c.tag) == -1) {
-      tags.push(c.tag);
-    }
+    if (tags.indexOf(c.tag) == -1) tags.push(c.tag);
   });
-
   tags.sort();
 
   mmTagsContainer.innerHTML = '';
-
   tags.forEach(function(tag) {
     var btn = document.createElement('button');
     btn.className = 'mm-tag active';
@@ -54,30 +49,26 @@ function buildTagButtons() {
 }
 
 
-// FILTER & SORT
+// FILTER UND SORTIERUNG
+// gibt eine gefilterte und sortierte kopie der karten zurück
+// ausgeblendete tags werden rausgefiltert, dann wird je nach aktivem filter sortiert
 function getFilteredCards() {
   var cards = CARDS.slice();
 
   if (hiddenTags.length > 0) {
-    cards = cards.filter(function(c) {
-      return hiddenTags.indexOf(c.tag) == -1;
-    });
+    cards = cards.filter(function(c) { return hiddenTags.indexOf(c.tag) == -1; });
   }
 
   if (activeFilter == 'week') {
     var weekAgo = Date.now() - 1000 * 60 * 60 * 24 * 7;
     cards = cards.filter(function(c) { return c.dateAdded >= weekAgo; });
     cards.sort(function(a, b) { return b.likesNum - a.likesNum; });
-
   } else if (activeFilter == 'liked') {
     cards.sort(function(a, b) { return b.likesNum - a.likesNum; });
-
   } else if (activeFilter == 'comments') {
     cards.sort(function(a, b) { return b.comments.length - a.comments.length; });
-
   } else if (activeFilter == 'new') {
     cards.sort(function(a, b) { return b.dateAdded - a.dateAdded; });
-
   } else if (activeFilter == 'foryou') {
     cards.sort(function(a, b) { return a.id.localeCompare(b.id); });
   }
@@ -86,7 +77,8 @@ function getFilteredCards() {
 }
 
 
-// BUILD FEED
+// KARTEN AUFBAUEN
+// erzeugt den html-block mit kartenbild und beschriftung
 function buildHeatmap(card) {
   return `
     <div class="hm-bg hm-photo">
@@ -96,6 +88,7 @@ function buildHeatmap(card) {
   `;
 }
 
+// erzeugt eine komplette karte als html-element: bild, axl-bubble und footer
 function buildCard(card) {
   var section = document.createElement('div');
   section.className = 'card-section';
@@ -103,9 +96,7 @@ function buildCard(card) {
 
   section.innerHTML = `
     <div class="card">
-      <div class="card-canvas">
-        ${buildHeatmap(card)}
-      </div>
+      <div class="card-canvas">${buildHeatmap(card)}</div>
 
       <div class="axo-bubble" id="axo-${card.id}">
         <div class="axo-emoji-wrap">🦎</div>
@@ -130,6 +121,7 @@ function buildCard(card) {
   return section;
 }
 
+// leert den feed und baut ihn mit den aktuell gefilterten karten neu auf
 function buildFeed() {
   feed.innerHTML = '';
   axoShown = {};
@@ -149,9 +141,7 @@ function buildFeed() {
     return;
   }
 
-  cards.forEach(function(card) {
-    feed.appendChild(buildCard(card));
-  });
+  cards.forEach(function(card) { feed.appendChild(buildCard(card)); });
 
   setupObserver();
   updateSidebar(0);
@@ -160,10 +150,10 @@ function buildFeed() {
 }
 
 
-// SIDEBAR UPDATE
+// SIDEBAR
+// aktualisiert like-zahl und kommentar-anzahl in der rechten leiste
 function updateSidebar(idx) {
   var cards = getFilteredCards();
-
   if (!cards[idx]) return;
 
   var card = cards[idx];
@@ -177,13 +167,13 @@ function updateSidebar(idx) {
 }
 
 
-// AXL DELAYED ENTRANCE
+// AXL BUBBLE
+// plant die axl-erklärung für eine karte 2,2 sekunden in der zukunft ein
+// wenn der user vorher weiterschrollt wird der timer abgebrochen (cancelAxl)
+// jede karte bekommt axl nur einmal gezeigt (axoShown verhindert wiederholungen)
 function scheduleAxl(cardId) {
   for (var id in axoTimers) {
-    if (id != cardId) {
-      clearTimeout(axoTimers[id]);
-      delete axoTimers[id];
-    }
+    if (id != cardId) { clearTimeout(axoTimers[id]); delete axoTimers[id]; }
   }
 
   if (axoShown[cardId]) return;
@@ -195,16 +185,14 @@ function scheduleAxl(cardId) {
     bubble.classList.add('axo-enter');
 
     var section = bubble.closest('.card-section');
-    if (section) {
-      section.classList.add('axl-visible');
-    }
+    if (section) section.classList.add('axl-visible');
 
     axoShown[cardId] = true;
     delete axoTimers[cardId];
-
   }, 2200);
 }
 
+// bricht den geplanten axl-timer ab (z.b. wenn der user weiterschrollt)
 function cancelAxl(cardId) {
   if (axoTimers[cardId]) {
     clearTimeout(axoTimers[cardId]);
@@ -213,14 +201,15 @@ function cancelAxl(cardId) {
 }
 
 
-// INTERSECTION OBSERVER
+// SCROLL OBSERVER
+// IntersectionObserver schaut welche karte gerade zu mindestens 55% sichtbar ist
+// sobald eine karte sichtbar wird: sidebar aktualisieren + axl einplanen
+// sobald eine karte verschwindet: axl-timer abbrechen
 function setupObserver() {
-  if (feedObserver) {
-    feedObserver.disconnect();
-  }
+  if (feedObserver) feedObserver.disconnect();
 
   var sections = feed.querySelectorAll('.card-section');
-  var cards = getFilteredCards();
+  var cards    = getFilteredCards();
 
   feedObserver = new IntersectionObserver(function(entries) {
     entries.forEach(function(entry) {
@@ -259,7 +248,7 @@ function toggleLike() {
 }
 
 
-// COMMENTS
+// KOMMENTARE
 function openComments() {
   commentOpen = true;
   commentPanel.classList.add('open');
@@ -277,21 +266,16 @@ function closeComments() {
 }
 
 function toggleComments() {
-  if (commentOpen) {
-    closeComments();
-  } else {
-    openComments();
-  }
+  if (commentOpen) closeComments(); else openComments();
 }
 
+// zeichnet die kommentarliste der aktuell sichtbaren karte neu
 function renderComments() {
   var cards = getFilteredCards();
   if (!cards[currentIdx]) return;
 
-  var card = cards[currentIdx];
   cpList.innerHTML = '';
-
-  card.comments.forEach(function(c) {
+  cards[currentIdx].comments.forEach(function(c) {
     var el = document.createElement('div');
     el.className = 'cp-comment';
     el.innerHTML = `
@@ -302,6 +286,7 @@ function renderComments() {
   });
 }
 
+// fügt den neuen kommentar am anfang der liste ein und scrollt nach oben
 function sendComment() {
   var val = cpInput.value.trim();
   if (!val) return;
@@ -334,15 +319,13 @@ function closeMenu() {
 }
 
 function toggleMenu() {
-  if (menuOpen) {
-    closeMenu();
-  } else {
-    openMenu();
-  }
+  if (menuOpen) closeMenu(); else openMenu();
 }
 
 
-// UTIL
+// HILFSFUNKTIONEN
+// wandelt sonderzeichen wie < > & in sichere html-codes um
+// verhindert dass kommentare als html-code ausgeführt werden (XSS-schutz)
 function escapeHtml(str) {
   return str
     .replace(/&/g, '&amp;')
@@ -352,9 +335,7 @@ function escapeHtml(str) {
 }
 
 
-// FULLSCREEN
-const fullscreenBtn = document.querySelector('.sb-special');
-
+// VOLLBILD
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(function() {});
@@ -363,9 +344,9 @@ function toggleFullscreen() {
   }
 }
 
+// tauscht das icon zwischen "vergrößern" und "verkleinern" je nach vollbild-status
 document.addEventListener('fullscreenchange', function() {
   var svg = fullscreenBtn.querySelector('svg');
-
   if (document.fullscreenElement) {
     svg.innerHTML = `
       <polyline points="4 14 10 14 10 20"/>
@@ -389,16 +370,13 @@ likeBtn.addEventListener('click', toggleLike);
 commentBtn.addEventListener('click', toggleComments);
 cpClose.addEventListener('click', closeComments);
 cpSend.addEventListener('click', sendComment);
-
-cpInput.addEventListener('keydown', function(e) {
-  if (e.key == 'Enter') sendComment();
-});
-
+cpInput.addEventListener('keydown', function(e) { if (e.key == 'Enter') sendComment(); });
 magicBtn.addEventListener('click', toggleMenu);
 mmClose.addEventListener('click', closeMenu);
 overlay.addEventListener('click', closeMenu);
 fullscreenBtn.addEventListener('click', toggleFullscreen);
 
+// aktiven filter setzen und feed neu laden wenn ein filter-button geklickt wird
 mmFilters.forEach(function(btn) {
   btn.addEventListener('click', function() {
     mmFilters.forEach(function(b) { b.classList.remove('active'); });
@@ -409,6 +387,7 @@ mmFilters.forEach(function(btn) {
   });
 });
 
+// tag ein- oder ausblenden wenn ein tag-button im menü geklickt wird
 mmTagsContainer.addEventListener('click', function(e) {
   var btn = e.target.closest('.mm-tag');
   if (!btn) return;
@@ -417,22 +396,10 @@ mmTagsContainer.addEventListener('click', function(e) {
   var tagName = btn.textContent.trim();
   var pos = hiddenTags.indexOf(tagName);
 
-  if (pos != -1) {
-    hiddenTags.splice(pos, 1);
-  } else {
-    hiddenTags.push(tagName);
-  }
+  if (pos != -1) hiddenTags.splice(pos, 1);
+  else hiddenTags.push(tagName);
 
   buildFeed();
-});
-
-document.querySelectorAll('.nav-pill').forEach(function(p) {
-  p.addEventListener('click', function() {
-    document.querySelectorAll('.nav-pill').forEach(function(x) {
-      x.classList.remove('active');
-    });
-    this.classList.add('active');
-  });
 });
 
 document.addEventListener('keydown', function(e) {
@@ -443,6 +410,6 @@ document.addEventListener('keydown', function(e) {
 });
 
 
-// INIT
+// START
 buildTagButtons();
 buildFeed();

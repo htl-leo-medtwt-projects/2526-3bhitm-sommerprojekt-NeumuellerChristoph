@@ -1,30 +1,30 @@
 <?php
-// CORS-Header damit das Frontend die API aufrufen kann
+// VERBINDUNG ZUR DATENBANK
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
-// --- Datenbankverbindung (XAMPP Standard) ---
 $host = 'localhost';
-$db   = 'interesting_maps'; // <-- ggf. deinen Datenbanknamen anpassen
+$db   = 'interesting_maps'; // datenbankname ggf. anpassen
 $user = 'root';
-$pass = '';                  // XAMPP hat standardmäßig kein Passwort
+$pass = '';                  // xampp hat standardmäßig kein passwort
 
+// PDO ist die php-schnittstelle zu mysql - bei einem fehler wirft es eine exception
 $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass, [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
 
-// --- Welche Aktion soll ausgeführt werden? ---
-// Aufruf z.B.: api.php?action=maps  oder  api.php?action=users  etc.
+// welche tabelle soll abgerufen werden - standard ist maps
+// aufruf z.b.: api.php?action=maps  oder  api.php?action=users
 $action = $_GET['action'] ?? 'maps';
 
 switch ($action) {
 
-    // ---- Alle Maps (mit zugehörigen Tags) ----
+    // ALLE MAPS MIT TAGS
     case 'maps':
         $maps = $pdo->query("SELECT * FROM maps ORDER BY id")->fetchAll();
 
-        // Zu jeder Map die Tags laden
+        // für jede map wird separat nachgeschaut welche tags sie hat (JOIN über map_tags)
         $tagStmt = $pdo->prepare("
             SELECT t.id, t.name, t.category
             FROM tags t
@@ -36,10 +36,10 @@ switch ($action) {
             $map['tags'] = $tagStmt->fetchAll();
         }
 
-        echo json_encode($maps, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        echo json_encode($maps, JSON_UNESCAPED_UNICODE);
         break;
 
-    // ---- Einzelne Map per ID ----
+    // EINE MAP PER ID
     case 'map':
         $id = (int) ($_GET['id'] ?? 0);
         $stmt = $pdo->prepare("SELECT * FROM maps WHERE id = ?");
@@ -48,11 +48,10 @@ switch ($action) {
 
         if (!$map) {
             http_response_code(404);
-            echo json_encode(['error' => 'Map nicht gefunden']);
+            echo json_encode(['error' => 'map nicht gefunden']);
             break;
         }
 
-        // Tags dazu laden
         $tagStmt = $pdo->prepare("
             SELECT t.id, t.name, t.category
             FROM tags t
@@ -62,23 +61,22 @@ switch ($action) {
         $tagStmt->execute([$id]);
         $map['tags'] = $tagStmt->fetchAll();
 
-        echo json_encode($map, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        echo json_encode($map, JSON_UNESCAPED_UNICODE);
         break;
 
-    // ---- Alle Users ----
+    // ALLE USER (passwort wird nicht mitgeschickt)
     case 'users':
-        // Passwort-Hash wird NICHT mitgeschickt
         $users = $pdo->query("SELECT id, username, email FROM users ORDER BY id")->fetchAll();
-        echo json_encode($users, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        echo json_encode($users, JSON_UNESCAPED_UNICODE);
         break;
 
-    // ---- Alle Tags ----
+    // ALLE TAGS
     case 'tags':
         $tags = $pdo->query("SELECT * FROM tags ORDER BY category, name")->fetchAll();
-        echo json_encode($tags, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        echo json_encode($tags, JSON_UNESCAPED_UNICODE);
         break;
 
-    // ---- Votes pro Map ----
+    // VOTES PRO MAP
     case 'votes':
         $votes = $pdo->query("
             SELECT map_id, COUNT(*) AS vote_count
@@ -86,15 +84,11 @@ switch ($action) {
             GROUP BY map_id
             ORDER BY vote_count DESC
         ")->fetchAll();
-        echo json_encode($votes, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        echo json_encode($votes, JSON_UNESCAPED_UNICODE);
         break;
 
-    // ---- Unbekannte Aktion ----
     default:
         http_response_code(400);
-        echo json_encode([
-            'error'            => 'Unbekannte Aktion',
-            'verfuegbare_actions' => ['maps', 'map', 'users', 'tags', 'votes']
-        ]);
+        echo json_encode(['error' => 'unbekannte action']);
         break;
 }

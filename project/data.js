@@ -1,4 +1,6 @@
-// data.js - Kartendaten
+// KARTENDATEN
+// alle karten sind hier als objekte gespeichert
+// jede karte hat: id, titel, quelle, tag, label, likes, datum, bild, kommentare und axl-erklärung
 
 const CARDS = [
   {
