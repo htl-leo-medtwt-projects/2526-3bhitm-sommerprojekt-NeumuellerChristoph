@@ -50,7 +50,7 @@ function loadCards(callback) {
     })
     .then(function(data) {
       // die felder aus der datenbank heißen anders als in der app - hier werden sie umbenannt
-      var cards = data.map(function(m) {
+      let cards = data.map(function(m) {
         return {
           id:        String(m.id),
           title:     m.title,
@@ -84,7 +84,7 @@ function loadCards(callback) {
 // TAG BUTTONS
 // liest alle tags aus den kartendaten, entfernt duplikate und baut daraus klickbare filter-buttons
 function buildTagButtons() {
-  var tags = [];
+  let tags = [];
 
   appCards.forEach(function(c) {
     if (tags.indexOf(c.tag) == -1) {
@@ -97,7 +97,7 @@ function buildTagButtons() {
   mmTagsContainer.innerHTML = '';
 
   tags.forEach(function(tag) {
-    var btn = document.createElement('button');
+    let btn = document.createElement('button');
     btn.className = 'mm-tag active';
     btn.textContent = tag;
     mmTagsContainer.appendChild(btn);
@@ -109,7 +109,7 @@ function buildTagButtons() {
 // gibt eine gefilterte und sortierte kopie der karten zurück
 // ausgeblendete tags werden rausgefiltert, dann wird je nach aktivem filter sortiert
 function getFilteredCards() {
-  var cards = appCards.slice();
+  let cards = appCards.slice();
 
   if (hiddenTags.length > 0) {
     cards = cards.filter(function(c) {
@@ -118,7 +118,7 @@ function getFilteredCards() {
   }
 
   if (activeFilter == 'week') {
-    var weekAgo = Date.now() - 1000 * 60 * 60 * 24 * 7;
+    let weekAgo = Date.now() - 1000 * 60 * 60 * 24 * 7;
     cards = cards.filter(function(c) {
       return c.dateAdded >= weekAgo;
     });
@@ -160,7 +160,7 @@ function buildHeatmap(card) {
 
 // erzeugt eine komplette karte als html-element: bild, axl-bubble und footer
 function buildCard(card) {
-  var section = document.createElement('div');
+  let section = document.createElement('div');
   section.className = 'card-section';
   section.dataset.id = card.id;
 
@@ -197,7 +197,7 @@ function buildFeed() {
   axoShown = {};
   axoTimers = {};
 
-  var cards = getFilteredCards();
+  let cards = getFilteredCards();
 
   if (cards.length == 0) {
     feed.innerHTML = `
@@ -228,10 +228,10 @@ function buildFeed() {
 // SIDEBAR
 // aktualisiert like-zahl und kommentar-anzahl in der rechten leiste
 function updateSidebar(idx) {
-  var cards = getFilteredCards();
+  let cards = getFilteredCards();
 
   if (cards[idx]) {
-    var card = cards[idx];
+    let card = cards[idx];
     likeCount.textContent    = card.likes;
     commentCount.textContent = card.comments.length;
 
@@ -248,7 +248,7 @@ function updateSidebar(idx) {
 // wenn der user vorher weiterschrollt wird der timer abgebrochen (cancelAxl)
 // jede karte bekommt axl nur einmal gezeigt (axoShown verhindert wiederholungen)
 function scheduleAxl(cardId) {
-  for (var id in axoTimers) {
+  for (let id in axoTimers) {
     if (id != cardId) {
       clearTimeout(axoTimers[id]);
       delete axoTimers[id];
@@ -257,12 +257,12 @@ function scheduleAxl(cardId) {
 
   if (!axoShown[cardId]) {
     axoTimers[cardId] = setTimeout(function() {
-      var bubble = document.getElementById('axo-' + cardId);
+      let bubble = document.getElementById('axo-' + cardId);
 
       if (bubble) {
         bubble.classList.add('axo-enter');
 
-        var section = bubble.closest('.card-section');
+        let section = bubble.closest('.card-section');
         if (section) {
           section.classList.add('axl-visible');
         }
@@ -292,13 +292,13 @@ function setupObserver() {
     feedObserver.disconnect();
   }
 
-  var sections = feed.querySelectorAll('.card-section');
-  var cards    = getFilteredCards();
+  let sections = feed.querySelectorAll('.card-section');
+  let cards    = getFilteredCards();
 
   feedObserver = new IntersectionObserver(function(entries) {
     entries.forEach(function(entry) {
-      var id  = entry.target.dataset.id;
-      var idx = cards.findIndex(function(c) { return c.id == id; });
+      let id  = entry.target.dataset.id;
+      let idx = cards.findIndex(function(c) { return c.id == id; });
 
       if (entry.isIntersecting) {
         currentIdx = idx;
@@ -325,7 +325,7 @@ function toggleLike() {
   likeBtn.classList.toggle('liked', liked);
 
   if (liked) {
-    likeIcon.style.stroke = 'var(--moss)';
+    likeIcon.style.stroke = 'let(--moss)';
     likeIcon.style.fill   = 'rgba(110,128,80,0.15)';
     likeBtn.style.transform = 'scale(1.28) rotate(-8deg)';
     setTimeout(function() {
@@ -365,13 +365,13 @@ function toggleComments() {
 
 // zeichnet die kommentarliste der aktuell sichtbaren karte neu
 function renderComments() {
-  var cards = getFilteredCards();
+  let cards = getFilteredCards();
 
   if (cards[currentIdx]) {
     cpList.innerHTML = '';
 
     cards[currentIdx].comments.forEach(function(c) {
-      var el = document.createElement('div');
+      let el = document.createElement('div');
       el.className = 'cp-comment';
       el.innerHTML = `
         <div class="cp-user">${escapeHtml(c.user)}</div>
@@ -384,10 +384,10 @@ function renderComments() {
 
 // fügt den neuen kommentar am anfang der liste ein und scrollt nach oben
 function sendComment() {
-  var val = cpInput.value.trim();
+  let val = cpInput.value.trim();
 
   if (val) {
-    var cards = getFilteredCards();
+    let cards = getFilteredCards();
 
     if (cards[currentIdx]) {
       cards[currentIdx].comments.unshift({ user: 'du', text: val });
@@ -431,7 +431,7 @@ function toggleMenu() {
 // wandelt sonderzeichen wie < > & in sichere html-codes um
 // verhindert dass kommentare als html-code ausgeführt werden (XSS-schutz)
 function escapeHtml(str) {
-  var result = str;
+  let result = str;
   result = result.replace(/&/g, '&amp;');
   result = result.replace(/</g, '&lt;');
   result = result.replace(/>/g, '&gt;');
@@ -451,7 +451,7 @@ function toggleFullscreen() {
 
 // tauscht das icon zwischen "vergrößern" und "verkleinern" je nach vollbild-status
 document.addEventListener('fullscreenchange', function() {
-  var svg = fullscreenBtn.querySelector('svg');
+  let svg = fullscreenBtn.querySelector('svg');
   if (document.fullscreenElement) {
     svg.innerHTML = `
       <polyline points="4 14 10 14 10 20"/>
@@ -502,12 +502,12 @@ mmFilters.forEach(function(btn) {
 
 // tag ein- oder ausblenden wenn ein tag-button im menü geklickt wird
 mmTagsContainer.addEventListener('click', function(e) {
-  var btn = e.target.closest('.mm-tag');
+  let btn = e.target.closest('.mm-tag');
 
   if (btn) {
     btn.classList.toggle('active');
-    var tagName = btn.textContent.trim();
-    var pos = hiddenTags.indexOf(tagName);
+    let tagName = btn.textContent.trim();
+    let pos = hiddenTags.indexOf(tagName);
 
     if (pos != -1) {
       hiddenTags.splice(pos, 1);
