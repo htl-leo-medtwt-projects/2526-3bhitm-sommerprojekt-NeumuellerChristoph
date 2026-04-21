@@ -3,10 +3,10 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
-$host = 'localhost';
-$db   = 'interesting_maps'; // datenbankname ggf. anpassen
+$host = 'db';              // so heißt der mysql-container in docker
+$db   = 'intresting maps'; // datenbankname wie in phpmyadmin
 $user = 'root';
-$pass = '';                  // xampp hat standardmäßig kein passwort
+$pass = '';                // kein passwort gesetzt
 
 // PDO ist die php-schnittstelle zu mysql - bei einem fehler wirft es eine exception
 $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass, [

@@ -8,6 +8,7 @@ let axoShown     = {};     // merkt sich welche karten axl schon gezeigt haben
 let activeFilter = 'week';
 let hiddenTags   = [];     // tags die der user im menü ausgeblendet hat
 let feedObserver = null;
+let appCards     = [];     // wird nach dem laden der api-daten befüllt
 
 // DOM ELEMENTE
 const feed            = document.getElementById('feed');
@@ -30,11 +31,61 @@ const mmTagsContainer = document.getElementById('mmTags');
 const fullscreenBtn   = document.querySelector('.sb-special');
 
 
+// DATEN LADEN
+// schickt eine anfrage an api.php und holt die karten aus der datenbank
+// wenn die api nicht erreichbar ist (z.b. kein server), werden die lokalen daten aus data.js verwendet
+function loadCards(callback) {
+  feed.innerHTML = `
+    <div class="card-section">
+      <div class="feed-empty">
+        <span class="feed-empty-emoji">🦎</span>
+        <p>Karten werden geladen...</p>
+      </div>
+    </div>`;
+
+  fetch('api.php?action=maps')
+    .then(function(res) {
+      if (!res.ok) throw new Error('server fehler');
+      return res.json();
+    })
+    .then(function(data) {
+      // die felder aus der datenbank heißen anders als in der app - hier werden sie umbenannt
+      var cards = data.map(function(m) {
+        return {
+          id:        String(m.id),
+          title:     m.title,
+          source:    m.media_url   || '',
+          tag:       m.topic       || '',
+          label:     (m.topic      || '').toUpperCase(),
+          likes:     '0',
+          likesNum:  0,
+          dateAdded: Date.now(),
+          image:     m.image_url   || '',
+          comments:  [],
+          axo:       m.description || '',
+        };
+      });
+      callback(cards);
+    })
+    .catch(function() {
+      // wenn die api nicht antwortet wird eine fehlermeldung im feed angezeigt
+      feed.innerHTML = `
+        <div class="card-section">
+          <div class="feed-empty">
+            <span class="feed-empty-emoji">🦎</span>
+            <p>Datenbank nicht erreichbar.</p>
+            <p>Bitte sicherstellen dass der Server läuft.</p>
+          </div>
+        </div>`;
+    });
+}
+
+
 // TAG BUTTONS
 // liest alle tags aus den kartendaten, entfernt duplikate und baut daraus klickbare filter-buttons
 function buildTagButtons() {
   var tags = [];
-  CARDS.forEach(function(c) {
+  appCards.forEach(function(c) {
     if (tags.indexOf(c.tag) == -1) tags.push(c.tag);
   });
   tags.sort();
@@ -53,7 +104,7 @@ function buildTagButtons() {
 // gibt eine gefilterte und sortierte kopie der karten zurück
 // ausgeblendete tags werden rausgefiltert, dann wird je nach aktivem filter sortiert
 function getFilteredCards() {
-  var cards = CARDS.slice();
+  var cards = appCards.slice();
 
   if (hiddenTags.length > 0) {
     cards = cards.filter(function(c) { return hiddenTags.indexOf(c.tag) == -1; });
@@ -411,5 +462,9 @@ document.addEventListener('keydown', function(e) {
 
 
 // START
-buildTagButtons();
-buildFeed();
+// zuerst daten laden, dann erst den feed aufbauen
+loadCards(function(cards) {
+  appCards = cards;
+  buildTagButtons();
+  buildFeed();
+});
