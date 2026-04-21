@@ -85,12 +85,17 @@ function loadCards(callback) {
 // liest alle tags aus den kartendaten, entfernt duplikate und baut daraus klickbare filter-buttons
 function buildTagButtons() {
   var tags = [];
+
   appCards.forEach(function(c) {
-    if (tags.indexOf(c.tag) == -1) tags.push(c.tag);
+    if (tags.indexOf(c.tag) == -1) {
+      tags.push(c.tag);
+    }
   });
+
   tags.sort();
 
   mmTagsContainer.innerHTML = '';
+
   tags.forEach(function(tag) {
     var btn = document.createElement('button');
     btn.className = 'mm-tag active';
@@ -107,21 +112,35 @@ function getFilteredCards() {
   var cards = appCards.slice();
 
   if (hiddenTags.length > 0) {
-    cards = cards.filter(function(c) { return hiddenTags.indexOf(c.tag) == -1; });
+    cards = cards.filter(function(c) {
+      return hiddenTags.indexOf(c.tag) == -1;
+    });
   }
 
   if (activeFilter == 'week') {
     var weekAgo = Date.now() - 1000 * 60 * 60 * 24 * 7;
-    cards = cards.filter(function(c) { return c.dateAdded >= weekAgo; });
-    cards.sort(function(a, b) { return b.likesNum - a.likesNum; });
+    cards = cards.filter(function(c) {
+      return c.dateAdded >= weekAgo;
+    });
+    cards.sort(function(a, b) {
+      return b.likesNum - a.likesNum;
+    });
   } else if (activeFilter == 'liked') {
-    cards.sort(function(a, b) { return b.likesNum - a.likesNum; });
+    cards.sort(function(a, b) {
+      return b.likesNum - a.likesNum;
+    });
   } else if (activeFilter == 'comments') {
-    cards.sort(function(a, b) { return b.comments.length - a.comments.length; });
+    cards.sort(function(a, b) {
+      return b.comments.length - a.comments.length;
+    });
   } else if (activeFilter == 'new') {
-    cards.sort(function(a, b) { return b.dateAdded - a.dateAdded; });
+    cards.sort(function(a, b) {
+      return b.dateAdded - a.dateAdded;
+    });
   } else if (activeFilter == 'foryou') {
-    cards.sort(function(a, b) { return a.id.localeCompare(b.id); });
+    cards.sort(function(a, b) {
+      return a.id.localeCompare(b.id);
+    });
   }
 
   return cards;
@@ -192,12 +211,17 @@ function buildFeed() {
     return;
   }
 
-  cards.forEach(function(card) { feed.appendChild(buildCard(card)); });
+  cards.forEach(function(card) {
+    feed.appendChild(buildCard(card));
+  });
 
   setupObserver();
   updateSidebar(0);
   currentIdx = 0;
-  setTimeout(function() { scheduleAxl(cards[0].id); }, 100);
+
+  setTimeout(function() {
+    scheduleAxl(cards[0].id);
+  }, 100);
 }
 
 
@@ -205,16 +229,17 @@ function buildFeed() {
 // aktualisiert like-zahl und kommentar-anzahl in der rechten leiste
 function updateSidebar(idx) {
   var cards = getFilteredCards();
-  if (!cards[idx]) return;
 
-  var card = cards[idx];
-  likeCount.textContent    = card.likes;
-  commentCount.textContent = card.comments.length;
+  if (cards[idx]) {
+    var card = cards[idx];
+    likeCount.textContent    = card.likes;
+    commentCount.textContent = card.comments.length;
 
-  liked = false;
-  likeBtn.classList.remove('liked');
-  likeIcon.style.fill   = 'none';
-  likeIcon.style.stroke = 'currentColor';
+    liked = false;
+    likeBtn.classList.remove('liked');
+    likeIcon.style.fill   = 'none';
+    likeIcon.style.stroke = 'currentColor';
+  }
 }
 
 
@@ -224,23 +249,29 @@ function updateSidebar(idx) {
 // jede karte bekommt axl nur einmal gezeigt (axoShown verhindert wiederholungen)
 function scheduleAxl(cardId) {
   for (var id in axoTimers) {
-    if (id != cardId) { clearTimeout(axoTimers[id]); delete axoTimers[id]; }
+    if (id != cardId) {
+      clearTimeout(axoTimers[id]);
+      delete axoTimers[id];
+    }
   }
 
-  if (axoShown[cardId]) return;
+  if (!axoShown[cardId]) {
+    axoTimers[cardId] = setTimeout(function() {
+      var bubble = document.getElementById('axo-' + cardId);
 
-  axoTimers[cardId] = setTimeout(function() {
-    var bubble = document.getElementById('axo-' + cardId);
-    if (!bubble) return;
+      if (bubble) {
+        bubble.classList.add('axo-enter');
 
-    bubble.classList.add('axo-enter');
+        var section = bubble.closest('.card-section');
+        if (section) {
+          section.classList.add('axl-visible');
+        }
 
-    var section = bubble.closest('.card-section');
-    if (section) section.classList.add('axl-visible');
-
-    axoShown[cardId] = true;
-    delete axoTimers[cardId];
-  }, 2200);
+        axoShown[cardId] = true;
+        delete axoTimers[cardId];
+      }
+    }, 2200);
+  }
 }
 
 // bricht den geplanten axl-timer ab (z.b. wenn der user weiterschrollt)
@@ -257,7 +288,9 @@ function cancelAxl(cardId) {
 // sobald eine karte sichtbar wird: sidebar aktualisieren + axl einplanen
 // sobald eine karte verschwindet: axl-timer abbrechen
 function setupObserver() {
-  if (feedObserver) feedObserver.disconnect();
+  if (feedObserver) {
+    feedObserver.disconnect();
+  }
 
   var sections = feed.querySelectorAll('.card-section');
   var cards    = getFilteredCards();
@@ -271,14 +304,18 @@ function setupObserver() {
         currentIdx = idx;
         updateSidebar(idx);
         scheduleAxl(id);
-        if (commentOpen) renderComments();
+        if (commentOpen) {
+          renderComments();
+        }
       } else {
         cancelAxl(id);
       }
     });
   }, { threshold: 0.55 });
 
-  sections.forEach(function(s) { feedObserver.observe(s); });
+  sections.forEach(function(s) {
+    feedObserver.observe(s);
+  });
 }
 
 
@@ -291,7 +328,9 @@ function toggleLike() {
     likeIcon.style.stroke = 'var(--moss)';
     likeIcon.style.fill   = 'rgba(110,128,80,0.15)';
     likeBtn.style.transform = 'scale(1.28) rotate(-8deg)';
-    setTimeout(function() { likeBtn.style.transform = ''; }, 200);
+    setTimeout(function() {
+      likeBtn.style.transform = '';
+    }, 200);
   } else {
     likeIcon.style.fill   = 'none';
     likeIcon.style.stroke = 'currentColor';
@@ -317,39 +356,47 @@ function closeComments() {
 }
 
 function toggleComments() {
-  if (commentOpen) closeComments(); else openComments();
+  if (commentOpen) {
+    closeComments();
+  } else {
+    openComments();
+  }
 }
 
 // zeichnet die kommentarliste der aktuell sichtbaren karte neu
 function renderComments() {
   var cards = getFilteredCards();
-  if (!cards[currentIdx]) return;
 
-  cpList.innerHTML = '';
-  cards[currentIdx].comments.forEach(function(c) {
-    var el = document.createElement('div');
-    el.className = 'cp-comment';
-    el.innerHTML = `
-      <div class="cp-user">${escapeHtml(c.user)}</div>
-      <div class="cp-text">${escapeHtml(c.text)}</div>
-    `;
-    cpList.appendChild(el);
-  });
+  if (cards[currentIdx]) {
+    cpList.innerHTML = '';
+
+    cards[currentIdx].comments.forEach(function(c) {
+      var el = document.createElement('div');
+      el.className = 'cp-comment';
+      el.innerHTML = `
+        <div class="cp-user">${escapeHtml(c.user)}</div>
+        <div class="cp-text">${escapeHtml(c.text)}</div>
+      `;
+      cpList.appendChild(el);
+    });
+  }
 }
 
 // fügt den neuen kommentar am anfang der liste ein und scrollt nach oben
 function sendComment() {
   var val = cpInput.value.trim();
-  if (!val) return;
 
-  var cards = getFilteredCards();
-  if (!cards[currentIdx]) return;
+  if (val) {
+    var cards = getFilteredCards();
 
-  cards[currentIdx].comments.unshift({ user: 'du', text: val });
-  cpInput.value = '';
-  renderComments();
-  commentCount.textContent = cards[currentIdx].comments.length;
-  cpList.scrollTop = 0;
+    if (cards[currentIdx]) {
+      cards[currentIdx].comments.unshift({ user: 'du', text: val });
+      cpInput.value = '';
+      renderComments();
+      commentCount.textContent = cards[currentIdx].comments.length;
+      cpList.scrollTop = 0;
+    }
+  }
 }
 
 
@@ -359,7 +406,9 @@ function openMenu() {
   magicMenu.classList.add('open');
   magicMenu.setAttribute('aria-hidden', 'false');
   overlay.classList.add('show');
-  if (commentOpen) closeComments();
+  if (commentOpen) {
+    closeComments();
+  }
 }
 
 function closeMenu() {
@@ -370,7 +419,11 @@ function closeMenu() {
 }
 
 function toggleMenu() {
-  if (menuOpen) closeMenu(); else openMenu();
+  if (menuOpen) {
+    closeMenu();
+  } else {
+    openMenu();
+  }
 }
 
 
@@ -378,11 +431,12 @@ function toggleMenu() {
 // wandelt sonderzeichen wie < > & in sichere html-codes um
 // verhindert dass kommentare als html-code ausgeführt werden (XSS-schutz)
 function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  var result = str;
+  result = result.replace(/&/g, '&amp;');
+  result = result.replace(/</g, '&lt;');
+  result = result.replace(/>/g, '&gt;');
+  result = result.replace(/"/g, '&quot;');
+  return result;
 }
 
 
@@ -421,7 +475,13 @@ likeBtn.addEventListener('click', toggleLike);
 commentBtn.addEventListener('click', toggleComments);
 cpClose.addEventListener('click', closeComments);
 cpSend.addEventListener('click', sendComment);
-cpInput.addEventListener('keydown', function(e) { if (e.key == 'Enter') sendComment(); });
+
+cpInput.addEventListener('keydown', function(e) {
+  if (e.key == 'Enter') {
+    sendComment();
+  }
+});
+
 magicBtn.addEventListener('click', toggleMenu);
 mmClose.addEventListener('click', closeMenu);
 overlay.addEventListener('click', closeMenu);
@@ -430,7 +490,9 @@ fullscreenBtn.addEventListener('click', toggleFullscreen);
 // aktiven filter setzen und feed neu laden wenn ein filter-button geklickt wird
 mmFilters.forEach(function(btn) {
   btn.addEventListener('click', function() {
-    mmFilters.forEach(function(b) { b.classList.remove('active'); });
+    mmFilters.forEach(function(b) {
+      b.classList.remove('active');
+    });
     this.classList.add('active');
     activeFilter = this.dataset.filter;
     closeMenu();
@@ -441,22 +503,30 @@ mmFilters.forEach(function(btn) {
 // tag ein- oder ausblenden wenn ein tag-button im menü geklickt wird
 mmTagsContainer.addEventListener('click', function(e) {
   var btn = e.target.closest('.mm-tag');
-  if (!btn) return;
 
-  btn.classList.toggle('active');
-  var tagName = btn.textContent.trim();
-  var pos = hiddenTags.indexOf(tagName);
+  if (btn) {
+    btn.classList.toggle('active');
+    var tagName = btn.textContent.trim();
+    var pos = hiddenTags.indexOf(tagName);
 
-  if (pos != -1) hiddenTags.splice(pos, 1);
-  else hiddenTags.push(tagName);
+    if (pos != -1) {
+      hiddenTags.splice(pos, 1);
+    } else {
+      hiddenTags.push(tagName);
+    }
 
-  buildFeed();
+    buildFeed();
+  }
 });
 
 document.addEventListener('keydown', function(e) {
   if (e.key == 'Escape') {
-    if (menuOpen)    closeMenu();
-    if (commentOpen) closeComments();
+    if (menuOpen) {
+      closeMenu();
+    }
+    if (commentOpen) {
+      closeComments();
+    }
   }
 });
 
