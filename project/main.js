@@ -35,7 +35,7 @@ const fullscreenBtn   = document.querySelector('.sb-special');
 // schickt eine anfrage an api.php und holt die karten aus der datenbank
 // wenn die api nicht erreichbar ist (z.b. kein server), werden die lokalen daten aus data.js verwendet
 function loadCards(callback) {
-  feed.innerHTML = `
+  feed.innerHTML = ` 
     <div class="card-section">
       <div class="feed-empty">
         <span class="feed-empty-emoji">🦎</span>
@@ -83,6 +83,7 @@ function loadCards(callback) {
 
 // TAG BUTTONS
 // liest alle tags aus den kartendaten, entfernt duplikate und baut daraus klickbare filter-buttons
+
 function buildTagButtons() {
   let tags = [];
 
@@ -142,7 +143,6 @@ function getFilteredCards() {
       return a.id.localeCompare(b.id);
     });
   }
-
   return cards;
 }
 
@@ -242,7 +242,6 @@ function updateSidebar(idx) {
   }
 }
 
-
 // AXL BUBBLE
 // plant die axl-erklärung für eine karte 2,2 sekunden in der zukunft ein
 // wenn der user vorher weiterschrollt wird der timer abgebrochen (cancelAxl)
@@ -317,6 +316,7 @@ function setupObserver() {
     feedObserver.observe(s);
   });
 }
+
 
 
 // LIKE
