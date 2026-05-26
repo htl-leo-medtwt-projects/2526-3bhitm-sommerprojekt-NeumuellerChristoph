@@ -10,9 +10,13 @@ if ($loggedIn && $username !== '') {
     $parts = explode(' ', $username);
     foreach ($parts as $p) {
         $initials .= mb_strtoupper(mb_substr($p, 0, 1));
-        if (mb_strlen($initials) >= 2) break;
+        if (mb_strlen($initials) >= 2) {
+            break;
+        }
     }
-    if ($initials === '') $initials = mb_strtoupper(mb_substr($username, 0, 2));
+    if ($initials === '') {
+        $initials = mb_strtoupper(mb_substr($username, 0, 2));
+    }
 }
 
 // Modal-Status aus GET-Parametern lesen (nach Redirect von login.php / register.php)
@@ -29,178 +33,6 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <style>
-    /* ── AVATAR BUTTON ── */
-    .nav-avatar {
-      cursor: pointer;
-      user-select: none;
-      position: relative;
-    }
-    .nav-avatar-wrap {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      position: relative;
-    }
-    .nav-username {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
-
-    /* ── LOGOUT DROPDOWN ── */
-    .avatar-dropdown {
-      display: none;
-      position: absolute;
-      top: calc(100% + 8px);
-      right: 0;
-      background: var(--paper);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      box-shadow: 0 4px 20px rgba(44,28,12,0.12);
-      z-index: 2000;
-      min-width: 130px;
-      overflow: hidden;
-    }
-    .avatar-dropdown.open { display: block; }
-    .avatar-dropdown a {
-      display: block;
-      padding: 0.65rem 1rem;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.82rem;
-      color: var(--rose);
-      text-decoration: none;
-      transition: background 0.15s;
-    }
-    .avatar-dropdown a:hover { background: var(--bg2); }
-
-    /* ── AUTH MODAL ── */
-    .auth-modal-bg {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 8000;
-      background: rgba(44,28,12,0.35);
-      backdrop-filter: blur(3px);
-      align-items: center;
-      justify-content: center;
-    }
-    .auth-modal-bg.open { display: flex; }
-
-    .auth-modal {
-      background: var(--paper);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 2rem 1.75rem 2rem;
-      width: 100%;
-      max-width: 360px;
-      box-shadow: 0 8px 40px rgba(44,28,12,0.18);
-      position: relative;
-    }
-    .auth-modal-close {
-      position: absolute;
-      top: 0.9rem;
-      right: 1rem;
-      background: none;
-      border: none;
-      font-size: 1.4rem;
-      color: var(--muted);
-      cursor: pointer;
-      line-height: 1;
-    }
-    .auth-modal-close:hover { color: var(--ink); }
-
-    .auth-tabs {
-      display: flex;
-      gap: 0;
-      margin-bottom: 1.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .auth-tab {
-      flex: 1;
-      padding: 0.55rem 0;
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.82rem;
-      color: var(--muted);
-      cursor: pointer;
-      margin-bottom: -1px;
-      transition: color 0.15s, border-color 0.15s;
-    }
-    .auth-tab.active {
-      color: var(--bark2);
-      border-bottom-color: var(--moss);
-    }
-
-    .auth-panel { display: none; }
-    .auth-panel.active { display: block; }
-
-    .auth-logo {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: var(--bark2);
-      margin-bottom: 1.25rem;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-    .auth-field { margin-bottom: 0.85rem; }
-    .auth-field label {
-      display: block;
-      font-size: 0.78rem;
-      font-family: 'DM Mono', monospace;
-      color: var(--muted);
-      margin-bottom: 0.3rem;
-      letter-spacing: 0.04em;
-    }
-    .auth-field input {
-      width: 100%;
-      padding: 0.6rem 0.85rem;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: var(--bg);
-      color: var(--ink);
-      font-family: 'DM Mono', monospace;
-      font-size: 0.9rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .auth-field input:focus { border-color: var(--moss); }
-    .auth-btn {
-      width: 100%;
-      padding: 0.7rem;
-      background: var(--bark2);
-      color: var(--paper);
-      border: none;
-      border-radius: 10px;
-      font-family: 'Fraunces', serif;
-      font-size: 0.95rem;
-      font-weight: 500;
-      cursor: pointer;
-      margin-top: 0.35rem;
-      transition: background 0.2s;
-    }
-    .auth-btn:hover { background: var(--bark); }
-    .auth-msg {
-      border-radius: 8px;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.8rem;
-      padding: 0.55rem 0.75rem;
-      margin-bottom: 0.85rem;
-    }
-    .auth-msg.error {
-      background: rgba(196,112,112,0.12);
-      border: 1px solid var(--rose);
-      color: var(--rose);
-    }
-    .auth-msg.success {
-      background: rgba(110,128,80,0.12);
-      border: 1px solid var(--moss);
-      color: var(--moss);
-    }
-  </style>
 </head>
 <body>
 
@@ -446,6 +278,7 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
       function openModal() {
         bg.classList.add('open');
       }
+
       function closeModal() {
         bg.classList.remove('open');
       }
@@ -453,10 +286,14 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
       avatarBtn.addEventListener('click', openModal);
       closeBtn.addEventListener('click', closeModal);
       bg.addEventListener('click', function(e) {
-        if (e.target === bg) closeModal();
+        if (e.target === bg) {
+          closeModal();
+        }
       });
       document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeModal();
+        if (e.key === 'Escape') {
+          closeModal();
+        }
       });
 
       tabs.forEach(function(tab) {
@@ -485,6 +322,7 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
         e.stopPropagation();
         dropdown.classList.toggle('open');
       });
+
       document.addEventListener('click', function() {
         dropdown.classList.remove('open');
       });

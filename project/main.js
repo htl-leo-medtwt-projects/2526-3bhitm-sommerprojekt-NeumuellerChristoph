@@ -1,4 +1,4 @@
-// GLOBALER ZUSTAND
+﻿// GLOBALER ZUSTAND
 // hier merken wir uns alles was die app gerade weiß
 let currentIdx   = 0;       // welche karte gerade sichtbar ist (index im array)
 let liked        = false;   // ob die aktuelle karte geliked wurde
@@ -53,12 +53,12 @@ function loadCards(callback) {
 
       // die felder aus der datenbank haben andere namen als wir intern verwenden
       // hier bauen wir aus jedem datenbank-eintrag ein karten-objekt
-      var cards = [];
+      let cards = [];
 
-      for (var i = 0; i < data.length; i++) {
-        var m = data[i];
+      for (let i = 0; i < data.length; i++) {
+        let m = data[i];
 
-        var card = {
+        let card = {
           id:        String(m.id),
           title:     m.title,
           source:    m.media_url   || '',
@@ -88,10 +88,10 @@ function loadCards(callback) {
 // TAG BUTTONS IM MENÜ AUFBAUEN
 // liest alle tags aus den karten und baut daraus klickbare filter-buttons
 function buildTagButtons() {
-  var tags = [];
+  let tags = [];
 
-  for (var i = 0; i < appCards.length; i++) {
-    var tag = appCards[i].tag;
+  for (let i = 0; i < appCards.length; i++) {
+    let tag = appCards[i].tag;
     // duplikate rausfiltern
     if (tags.indexOf(tag) === -1) {
       tags.push(tag);
@@ -102,8 +102,8 @@ function buildTagButtons() {
 
   mmTagsContainer.innerHTML = '';
 
-  for (var j = 0; j < tags.length; j++) {
-    var btn = document.createElement('button');
+  for (let j = 0; j < tags.length; j++) {
+    let btn = document.createElement('button');
     btn.className   = 'mm-tag active';
     btn.textContent = tags[j];
     mmTagsContainer.appendChild(btn);
@@ -117,12 +117,12 @@ function buildTagButtons() {
 function getFilteredCards() {
 
   // erstmal alle karten kopieren damit wir das original nicht verändern
-  var cards = appCards.slice();
+  let cards = appCards.slice();
 
   // ausgeblendete tags rauswerfen
   if (hiddenTags.length > 0) {
-    var filtered = [];
-    for (var i = 0; i < cards.length; i++) {
+    let filtered = [];
+    for (let i = 0; i < cards.length; i++) {
       if (hiddenTags.indexOf(cards[i].tag) === -1) {
         filtered.push(cards[i]);
       }
@@ -133,9 +133,9 @@ function getFilteredCards() {
   // je nach aktivem filter sortieren
   if (activeFilter === 'week') {
     // nur karten der letzten 7 tage, dann nach likes
-    var weekAgo = Date.now() - 1000 * 60 * 60 * 24 * 7;
-    var thisWeek = [];
-    for (var j = 0; j < cards.length; j++) {
+    let weekAgo = Date.now() - 1000 * 60 * 60 * 24 * 7;
+    let thisWeek = [];
+    for (let j = 0; j < cards.length; j++) {
       if (cards[j].dateAdded >= weekAgo) {
         thisWeek.push(cards[j]);
       }
@@ -172,7 +172,7 @@ function buildHeatmap(card) {
 // EINE KARTE ALS HTML-ELEMENT BAUEN
 // bild, axl-bubble und footer zusammensetzen
 function buildCard(card) {
-  var section = document.createElement('div');
+  let section = document.createElement('div');
   section.className    = 'card-section';
   section.dataset.id   = card.id;
 
@@ -207,14 +207,14 @@ function buildFeed() {
   axoShown  = {};
   axoTimers = {};
 
-  var cards = getFilteredCards();
+  let cards = getFilteredCards();
 
   if (cards.length === 0) {
     feed.innerHTML = '<div class="card-section"><div class="feed-empty"><span class="feed-empty-emoji">🦎</span><p>Keine Karten für diese Filter-Kombination.</p><p>Versuch mal andere Themen!</p></div></div>';
     return;
   }
 
-  for (var i = 0; i < cards.length; i++) {
+  for (let i = 0; i < cards.length; i++) {
     feed.appendChild(buildCard(cards[i]));
   }
 
@@ -232,10 +232,10 @@ function buildFeed() {
 // SIDEBAR AKTUALISIEREN
 // like-zahl und kommentar-anzahl in der rechten leiste aktualisieren
 function updateSidebar(idx) {
-  var cards = getFilteredCards();
+  let cards = getFilteredCards();
 
   if (cards[idx]) {
-    var card = cards[idx];
+    let card = cards[idx];
     likeCount.textContent    = card.likes;
     commentCount.textContent = card.comments.length;
 
@@ -254,7 +254,7 @@ function updateSidebar(idx) {
 function scheduleAxl(cardId) {
 
   // timer aller anderen karten stoppen
-  for (var id in axoTimers) {
+  for (let id in axoTimers) {
     if (id !== cardId) {
       clearTimeout(axoTimers[id]);
       delete axoTimers[id];
@@ -264,12 +264,12 @@ function scheduleAxl(cardId) {
   // jede karte bekommt axl nur einmal angezeigt
   if (!axoShown[cardId]) {
     axoTimers[cardId] = setTimeout(function() {
-      var bubble = document.getElementById('axo-' + cardId);
+      let bubble = document.getElementById('axo-' + cardId);
 
       if (bubble) {
         bubble.classList.add('axo-enter');
 
-        var section = bubble.closest('.card-section');
+        let section = bubble.closest('.card-section');
         if (section) {
           section.classList.add('axl-visible');
         }
@@ -299,17 +299,17 @@ function setupObserver() {
     feedObserver.disconnect();
   }
 
-  var sections = feed.querySelectorAll('.card-section');
-  var cards    = getFilteredCards();
+  let sections = feed.querySelectorAll('.card-section');
+  let cards    = getFilteredCards();
 
   feedObserver = new IntersectionObserver(function(entries) {
-    for (var i = 0; i < entries.length; i++) {
-      var entry = entries[i];
-      var id    = entry.target.dataset.id;
-      var idx   = -1;
+    for (let i = 0; i < entries.length; i++) {
+      let entry = entries[i];
+      let id    = entry.target.dataset.id;
+      let idx   = -1;
 
       // index der karte im array finden
-      for (var j = 0; j < cards.length; j++) {
+      for (let j = 0; j < cards.length; j++) {
         if (cards[j].id === id) {
           idx = j;
           break;
@@ -332,7 +332,7 @@ function setupObserver() {
     }
   }, { threshold: 0.55 });
 
-  for (var k = 0; k < sections.length; k++) {
+  for (let k = 0; k < sections.length; k++) {
     feedObserver.observe(sections[k]);
   }
 }
@@ -374,17 +374,19 @@ function preloadComments(cardId) {
     })
     .then(function(data) {
       // karte im array finden und kommentare eintragen
-      var cards = getFilteredCards();
-      var card  = null;
+      let cards = getFilteredCards();
+      let card  = null;
 
-      for (var i = 0; i < cards.length; i++) {
+      for (let i = 0; i < cards.length; i++) {
         if (cards[i].id === cardId) {
           card = cards[i];
           break;
         }
       }
 
-      if (!card) return;
+      if (!card) {
+        return;
+      }
 
       card.comments = data;
 
@@ -394,8 +396,8 @@ function preloadComments(cardId) {
         commentCount.textContent = data.length;
       } else {
         // sonst nur die zahl in der sidebar aktualisieren
-        var idx = -1;
-        for (var j = 0; j < cards.length; j++) {
+        let idx = -1;
+        for (let j = 0; j < cards.length; j++) {
           if (cards[j].id === cardId) {
             idx = j;
             break;
@@ -438,10 +440,12 @@ function toggleComments() {
 // wenn die kommentare schon vorgeladen wurden zeigen wir sie sofort,
 // sonst nochmal von der api holen
 function loadCommentsFromDb() {
-  var cards = getFilteredCards();
-  if (!cards[currentIdx]) return;
+  let cards = getFilteredCards();
+  if (!cards[currentIdx]) {
+    return;
+  }
 
-  var mapId = cards[currentIdx].id;
+  let mapId = cards[currentIdx].id;
 
   if (commentsLoaded[mapId]) {
     // schon geladen, einfach anzeigen
@@ -451,27 +455,29 @@ function loadCommentsFromDb() {
   }
 
   // noch nicht geladen, ladetext anzeigen und dann fetchen
-  cpList.innerHTML = '<div class="cp-comment" style="opacity:0.5">Laden…</div>';
+  cpList.innerHTML = '<div class="cp-comment cp-comment-muted">Laden…</div>';
   preloadComments(mapId);
 }
 
 // KOMMENTARLISTE RENDERN
 // baut die html-liste der kommentare für die aktuelle karte
 function renderComments() {
-  var cards = getFilteredCards();
+  let cards = getFilteredCards();
 
-  if (!cards[currentIdx]) return;
+  if (!cards[currentIdx]) {
+    return;
+  }
 
   cpList.innerHTML = '';
 
   if (cards[currentIdx].comments.length === 0) {
-    cpList.innerHTML = '<div class="cp-comment" style="opacity:0.5">Noch keine Kommentare. Sei der Erste!</div>';
+    cpList.innerHTML = '<div class="cp-comment cp-comment-muted">Noch keine Kommentare. Sei der Erste!</div>';
     return;
   }
 
-  for (var i = 0; i < cards[currentIdx].comments.length; i++) {
-    var c  = cards[currentIdx].comments[i];
-    var el = document.createElement('div');
+  for (let i = 0; i < cards[currentIdx].comments.length; i++) {
+    let c  = cards[currentIdx].comments[i];
+    let el = document.createElement('div');
     el.className = 'cp-comment';
 
     // username und kommentartext nebeneinander anzeigen
@@ -492,13 +498,17 @@ function sendComment() {
     return;
   }
 
-  var val = cpInput.value.trim();
-  if (!val) return;
+  let val = cpInput.value.trim();
+  if (!val) {
+    return;
+  }
 
-  var cards = getFilteredCards();
-  if (!cards[currentIdx]) return;
+  let cards = getFilteredCards();
+  if (!cards[currentIdx]) {
+    return;
+  }
 
-  var mapId = parseInt(cards[currentIdx].id);
+  let mapId = parseInt(cards[currentIdx].id);
 
   // kommentar per fetch an comment_save.php schicken
   fetch('comment_save.php', {
@@ -510,7 +520,9 @@ function sendComment() {
       return res.json();
     })
     .then(function(saved) {
-      if (saved.error) return;
+      if (saved.error) {
+        return;
+      }
 
       // eingabefeld leeren und neuen kommentar direkt in die liste packen
       cpInput.value = '';
@@ -526,7 +538,7 @@ function sendComment() {
 // LOGIN MODAL ÖFFNEN
 // wird aufgerufen wenn nicht-eingeloggte user etwas tun wollen das login braucht
 function openAuthModal() {
-  var bg = document.getElementById('authModalBg');
+  let bg = document.getElementById('authModalBg');
   if (bg) {
     bg.classList.add('open');
   }
@@ -571,7 +583,7 @@ function toggleFullscreen() {
 
 // icon zwischen vergrößern und verkleinern wechseln
 document.addEventListener('fullscreenchange', function() {
-  var svg = fullscreenBtn.querySelector('svg');
+  let svg = fullscreenBtn.querySelector('svg');
   if (document.fullscreenElement) {
     svg.innerHTML =
       '<polyline points="4 14 10 14 10 20"/>'
@@ -591,7 +603,7 @@ document.addEventListener('fullscreenchange', function() {
 // XSS SCHUTZ
 // wandelt sonderzeichen in sichere html-codes um damit kommentare nicht als code ausgeführt werden
 function escapeHtml(str) {
-  var result = str;
+  let result = str;
   result = result.replace(/&/g,  '&amp;');
   result = result.replace(/</g,  '&lt;');
   result = result.replace(/>/g,  '&gt;');
@@ -635,12 +647,14 @@ mmFilters.forEach(function(btn) {
 
 // tag ein- oder ausblenden
 mmTagsContainer.addEventListener('click', function(e) {
-  var btn = e.target.closest('.mm-tag');
-  if (!btn) return;
+  let btn = e.target.closest('.mm-tag');
+  if (!btn) {
+    return;
+  }
 
   btn.classList.toggle('active');
-  var tagName = btn.textContent.trim();
-  var pos     = hiddenTags.indexOf(tagName);
+  let tagName = btn.textContent.trim();
+  let pos     = hiddenTags.indexOf(tagName);
 
   if (pos !== -1) {
     hiddenTags.splice(pos, 1);
@@ -654,8 +668,13 @@ mmTagsContainer.addEventListener('click', function(e) {
 // escape schließt offene panels
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    if (menuOpen)    closeMenu();
-    if (commentOpen) closeComments();
+    if (menuOpen) {
+      closeMenu();
+    }
+
+    if (commentOpen) {
+      closeComments();
+    }
   }
 });
 
@@ -667,3 +686,5 @@ loadCards(function(cards) {
   buildTagButtons();
   buildFeed();
 });
+
+
