@@ -257,13 +257,6 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
             <em>letzte 24 Stunden</em>
           </span>
         </button>
-        <button class="mm-filter" data-filter="foryou">
-          <span class="mm-icon">🗺️</span>
-          <span class="mm-filter-text">
-            <strong>Für dich</strong>
-            <em>personalisiert</em>
-          </span>
-        </button>
       </div>
     </div>
 
@@ -499,6 +492,9 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
     <?php endif; ?>
   </script>
 
+  <script>
+    var IS_LOGGED_IN = <?= $loggedIn ? 'true' : 'false' ?>;
+  </script>
   <script src="main.js"></script>
 </body>
 </html>

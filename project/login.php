@@ -1,7 +1,9 @@
 <?php
+
+// LOGIN
 session_start();
 
-// already logged in → redirect to main page
+// schon eingeloggt, kein grund hier zu sein
 if (isset($_SESSION["login"]) && $_SESSION["login"] === 1) {
     header("Location: index.php");
     exit;
@@ -9,34 +11,28 @@ if (isset($_SESSION["login"]) && $_SESSION["login"] === 1) {
 
 require_once "database.php";
 
-$error   = "";
-$success = "";
+$error = "";
 
+// formular wurde abgeschickt
 if (!empty($_POST["submit"])) {
-    // get data from POST array
+
     $username = $_POST["username"];
     $passwort = $_POST["passwort"];
 
-    // User from db
-    // Prepare a select statement for the database query. ? is a placeholder for name.
-    $stmt = $conn->prepare(
-        "SELECT * FROM users WHERE username = ? LIMIT 1"
-    );
-
-    // Bind value username to select statement. (s = String/varchar)
+    // user in der datenbank suchen, ? verhindert sql injection
+    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ? LIMIT 1");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $res = $stmt->get_result();
 
-    // Check the select result. If there is a row then the user has been found.
     if ($res->num_rows === 1) {
         $user = $res->fetch_assoc();
 
-        // Passwort prüfen – do password verification and set some session variables
-        if (password_verify($passwort, $user["password"])) {
+        // password_verify vergleicht das eingegebene passwort mit dem gespeicherten hash
+        if (password_verify($passwort, $user["password_hash"])) {
+            // alles passt, session starten und weiter zur hauptseite
             $_SESSION["login"] = 1;
             $_SESSION["user"]  = $user;
-
             $conn->close();
             header("Location: index.php");
             exit;
@@ -47,6 +43,7 @@ if (!empty($_POST["submit"])) {
         $error = "Benutzer nicht gefunden.";
     }
 
+    // bei fehler zurück zur startseite mit login-modal und fehlermeldung
     $conn->close();
     header("Location: index.php?modal=login&error=" . urlencode($error));
     exit;
@@ -54,7 +51,7 @@ if (!empty($_POST["submit"])) {
 
 $conn->close();
 
-// Wenn direkt aufgerufen → weiter zu index.php mit Modal offen
+// direkt aufgerufen, einfach zur startseite mit modal
 header("Location: index.php?modal=login");
 exit;
 ?>

@@ -1,35 +1,54 @@
 <?php
-// VERBINDUNG ZUR DATENBANK
+
+// API ENDPUNKT
+// diese datei gibt daten aus der datenbank als json zurück
+// aufruf z.b.: api.php?action=maps  oder  api.php?action=comments&map_id=2
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
-$host = 'db_server';        // so heißt der mysql-container in docker
-$db   = 'intresting maps';  // datenbankname wie in phpmyadmin
+
+// DATENBANKVERBINDUNG
+$host = 'db_server';
+$db   = 'intresting maps';
 $user = 'root';
 $pass = 'rootpassword';
 
-// PDO ist die php-schnittstelle zu mysql
-$pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass);
-$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+$conn = new mysqli($host, $user, $pass, $db);
 
-// welche tabelle soll abgerufen werden - standard ist maps
-// aufruf z.b.: api.php?action=maps  oder  api.php?action=users
+if ($conn->connect_error) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Datenbankverbindung fehlgeschlagen']);
+    exit;
+}
+
+// utf8mb4 damit auch emojis und sonderzeichen richtig ankommen
+$conn->set_charset('utf8mb4');
+
+
+// WELCHE ACTION WURDE ANGEFRAGT
+// wenn nichts angegeben ist, geben wir einfach alle maps zurück
 if (isset($_GET['action'])) {
     $action = $_GET['action'];
 } else {
     $action = 'maps';
 }
 
+
+// ROUTING
 switch ($action) {
 
-    // ALLE MAPS MIT TAGS
+    // ALLE MAPS LADEN
     case 'maps':
-        $stmt = $pdo->query("SELECT * FROM maps ORDER BY id");
-        $maps = $stmt->fetchAll();
+        $maps = $conn->query("SELECT * FROM maps ORDER BY id");
 
-        // für jede map wird separat nachgeschaut welche tags sie hat (JOIN über map_tags)
-        $tagStmt = $pdo->prepare("
+        if (!$maps) {
+            http_response_code(500);
+            echo json_encode(['error' => $conn->error]);
+            exit;
+        }
+
+        // für jede map schauen wir noch welche tags sie hat
+        $tagQuery = $conn->prepare("
             SELECT t.id, t.name, t.category
             FROM tags t
             JOIN map_tags mt ON mt.tag_id = t.id
@@ -37,16 +56,20 @@ switch ($action) {
         ");
 
         $result = [];
-        foreach ($maps as $map) {
-            $tagStmt->execute([$map['id']]);
-            $map['tags'] = $tagStmt->fetchAll();
-            $result[] = $map;
+
+        while ($map = $maps->fetch_assoc()) {
+            $tagQuery->bind_param("i", $map['id']);
+            $tagQuery->execute();
+            $tagResult    = $tagQuery->get_result();
+            $map['tags']  = $tagResult->fetch_all(MYSQLI_ASSOC);
+            $result[]     = $map;
         }
 
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         break;
 
-    // EINE MAP PER ID
+
+    // EINE EINZELNE MAP PER ID
     case 'map':
         if (isset($_GET['id'])) {
             $id = (int) $_GET['id'];
@@ -54,19 +77,24 @@ switch ($action) {
             $id = 0;
         }
 
-        $stmt = $pdo->prepare("SELECT * FROM maps WHERE id = ?");
-        $stmt->execute([$id]);
-        $map = $stmt->fetch();
+        $stmt = $conn->prepare("SELECT * FROM maps WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $mapResult = $stmt->get_result();
+        $map       = $mapResult->fetch_assoc();
 
         if ($map) {
-            $tagStmt = $pdo->prepare("
+            // tags für diese map auch noch dazuladen
+            $tagQuery = $conn->prepare("
                 SELECT t.id, t.name, t.category
                 FROM tags t
                 JOIN map_tags mt ON mt.tag_id = t.id
                 WHERE mt.map_id = ?
             ");
-            $tagStmt->execute([$id]);
-            $map['tags'] = $tagStmt->fetchAll();
+            $tagQuery->bind_param("i", $id);
+            $tagQuery->execute();
+            $tagResult  = $tagQuery->get_result();
+            $map['tags'] = $tagResult->fetch_all(MYSQLI_ASSOC);
 
             echo json_encode($map, JSON_UNESCAPED_UNICODE);
         } else {
@@ -75,34 +103,66 @@ switch ($action) {
         }
         break;
 
-    // ALLE USER (passwort wird nicht mitgeschickt)
+
+    // ALLE USER (passwort kommt hier natürlich nicht mit raus)
     case 'users':
-        $stmt = $pdo->query("SELECT id, username, email FROM users ORDER BY id");
-        $users = $stmt->fetchAll();
+        $res   = $conn->query("SELECT id, username, email FROM users ORDER BY id");
+        $users = $res->fetch_all(MYSQLI_ASSOC);
         echo json_encode($users, JSON_UNESCAPED_UNICODE);
         break;
 
+
     // ALLE TAGS
     case 'tags':
-        $stmt = $pdo->query("SELECT * FROM tags ORDER BY category, name");
-        $tags = $stmt->fetchAll();
+        $res  = $conn->query("SELECT * FROM tags ORDER BY category, name");
+        $tags = $res->fetch_all(MYSQLI_ASSOC);
         echo json_encode($tags, JSON_UNESCAPED_UNICODE);
         break;
 
-    // VOTES PRO MAP
+
+    // VOTES PRO MAP (wie viele likes hat jede karte)
     case 'votes':
-        $stmt = $pdo->query("
+        $res   = $conn->query("
             SELECT map_id, COUNT(*) AS vote_count
             FROM votes
             GROUP BY map_id
             ORDER BY vote_count DESC
         ");
-        $votes = $stmt->fetchAll();
+        $votes = $res->fetch_all(MYSQLI_ASSOC);
         echo json_encode($votes, JSON_UNESCAPED_UNICODE);
         break;
 
+
+    // KOMMENTARE FÜR EINE MAP
+    case 'comments':
+        if (isset($_GET['map_id'])) {
+            $map_id = (int) $_GET['map_id'];
+        } else {
+            $map_id = 0;
+        }
+
+        // wir joinen mit users damit wir den username direkt mitbekommen
+        $stmt = $conn->prepare("
+            SELECT c.id, c.comment, c.created_at, u.username
+            FROM comments c
+            JOIN users u ON u.id = c.user_id
+            WHERE c.map_id = ?
+            ORDER BY c.created_at ASC
+        ");
+        $stmt->bind_param("i", $map_id);
+        $stmt->execute();
+        $commentResult = $stmt->get_result();
+        $comments      = $commentResult->fetch_all(MYSQLI_ASSOC);
+
+        echo json_encode($comments, JSON_UNESCAPED_UNICODE);
+        break;
+
+
+    // ALLES ANDERE
     default:
         http_response_code(400);
         echo json_encode(['error' => 'unbekannte action']);
         break;
 }
+
+$conn->close();

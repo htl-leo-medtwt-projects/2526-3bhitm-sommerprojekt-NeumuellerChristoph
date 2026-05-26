@@ -1,7 +1,9 @@
 <?php
+
+// REGISTRIERUNG
 session_start();
 
-// already logged in → redirect to main page
+// wenn jemand schon eingeloggt ist hat er hier nichts verloren
 if (isset($_SESSION["login"]) && $_SESSION["login"] === 1) {
     header("Location: index.php");
     exit;
@@ -11,36 +13,39 @@ require_once "database.php";
 
 $error = "";
 
+// formular wurde abgeschickt
 if (!empty($_POST["submit"])) {
-    // get data from POST array and parse database special characters
-    // this is needed to block hacking attacks
-    $username = $conn->real_escape_string($_POST["username"]);
-    $email    = $conn->real_escape_string($_POST["email"]);
-    $passwort = $conn->real_escape_string($_POST["passwort1"]);
 
-    if (strcmp($passwort, $conn->real_escape_string($_POST["passwort2"])) != 0) {
-        // password is not repeated correctly
+    // eingaben aus dem formular holen und sonderzeichen entschärfen (sql injection schutz)
+    $username  = $conn->real_escape_string($_POST["username"]);
+    $email     = $conn->real_escape_string($_POST["email"]);
+    $passwort1 = $conn->real_escape_string($_POST["passwort1"]);
+    $passwort2 = $conn->real_escape_string($_POST["passwort2"]);
+
+    // prüfen ob beide passwörter gleich sind
+    if ($passwort1 !== $passwort2) {
         $error = "Passwörter stimmen nicht überein.";
     } else {
-        // create password hash from original password
-        // VARCHAR 255 necessary, but officially PHP recommendation: at least 255 characters
-        $passwortHash = password_hash($passwort, PASSWORD_BCRYPT);
+        // passwort wird gehasht gespeichert, niemals im klartext
+        $passwortHash = password_hash($passwort1, PASSWORD_BCRYPT);
 
-        // Statement for insert the values of the new user
-        $insertStatement = "INSERT INTO users (username, email, password)
-                            VALUES ('$username', '$email', '$passwortHash')";
+        $sql = "INSERT INTO users (username, email, password_hash)
+                VALUES ('$username', '$email', '$passwortHash')";
 
-        if ($res = $conn->query($insertStatement)) {
+        $res = $conn->query($sql);
+
+        if ($res) {
+            // hat geklappt, weiter zum login
             $conn->close();
-            // User created → go to login form
             header("Location: login.php?registered=1");
             exit;
         } else {
-            // NO insertion. User could not be added. Maybe user already exists.
+            // meistens bedeutet das dass username oder email schon vergeben sind
             $error = "Benutzername oder E-Mail existiert bereits.";
         }
     }
 
+    // wenn es einen fehler gab zurück zur startseite mit dem register-modal offen
     if ($error) {
         $conn->close();
         header("Location: index.php?modal=register&error=" . urlencode($error));
@@ -50,7 +55,7 @@ if (!empty($_POST["submit"])) {
 
 $conn->close();
 
-// Wenn direkt aufgerufen → weiter zu index.php mit Modal offen
+// wenn die seite direkt aufgerufen wird, einfach zur startseite mit modal
 header("Location: index.php?modal=register");
 exit;
 ?>
