@@ -33,7 +33,7 @@ if (!empty($_POST["submit"])) {
         $user = $res->fetch_assoc();
 
         // Passwort prüfen – do password verification and set some session variables
-        if (password_verify($passwort, $user["password_hash"])) {
+        if (password_verify($passwort, $user["password"])) {
             $_SESSION["login"] = 1;
             $_SESSION["user"]  = $user;
 

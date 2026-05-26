@@ -27,7 +27,7 @@ if (!empty($_POST["submit"])) {
         $passwortHash = password_hash($passwort, PASSWORD_BCRYPT);
 
         // Statement for insert the values of the new user
-        $insertStatement = "INSERT INTO users (username, email, password_hash)
+        $insertStatement = "INSERT INTO users (username, email, password)
                             VALUES ('$username', '$email', '$passwortHash')";
 
         if ($res = $conn->query($insertStatement)) {

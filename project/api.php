@@ -3,10 +3,10 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
-$host = 'db';               // so heißt der mysql-container in docker
+$host = 'db_server';        // so heißt der mysql-container in docker
 $db   = 'intresting maps';  // datenbankname wie in phpmyadmin
 $user = 'root';
-$pass = '';                 // kein passwort gesetzt
+$pass = 'rootpassword';
 
 // PDO ist die php-schnittstelle zu mysql
 $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass);
