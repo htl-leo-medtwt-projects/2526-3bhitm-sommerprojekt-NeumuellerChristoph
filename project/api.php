@@ -24,7 +24,6 @@ if ($conn->connect_error) {
 // utf8mb4 damit auch emojis und sonderzeichen richtig ankommen
 $conn->set_charset('utf8mb4');
 
-$conn->query("SET time_zone = 'pst (UTC-8)'");
 
 
 // WELCHE ACTION WURDE ANGEFRAGT
