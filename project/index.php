@@ -61,14 +61,14 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
     <div class="mm-section">
       <p class="mm-section-label">sortierung</p>
       <div class="mm-filters" id="mmFilters">
-        <button class="mm-filter active" data-filter="week">
+        <button class="mm-filter" data-filter="week">
           <span class="mm-icon">🔥</span>
           <span class="mm-filter-text">
             <strong>Top 10 diese Woche</strong>
             <em>meistgeschaut · 7 Tage</em>
           </span>
         </button>
-        <button class="mm-filter" data-filter="liked">
+        <button class="mm-filter active" data-filter="liked">
           <span class="mm-icon">❤️</span>
           <span class="mm-filter-text">
             <strong>Meist geliked</strong>
