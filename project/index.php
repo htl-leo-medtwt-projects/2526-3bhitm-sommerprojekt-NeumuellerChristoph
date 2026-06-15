@@ -1,12 +1,12 @@
 <?php
 session_start();
 
-$loggedIn = isset($_SESSION["login"]) && $_SESSION["login"] === 1;
+$loggedIn = isset($_SESSION["login"]) && $_SESSION["login"] == 1;
 $username = $loggedIn ? htmlspecialchars($_SESSION["user"]["username"], ENT_QUOTES, 'UTF-8') : '';
 
 // Initialen für den Avatar (max. 2 Zeichen)
 $initials = '';
-if ($loggedIn && $username !== '') {
+if ($loggedIn && $username != '') {
     $parts = explode(' ', $username);
     foreach ($parts as $p) {
         $initials .= mb_strtoupper(mb_substr($p, 0, 1));
@@ -14,7 +14,7 @@ if ($loggedIn && $username !== '') {
             break;
         }
     }
-    if ($initials === '') {
+    if ($initials == '') {
         $initials = mb_strtoupper(mb_substr($username, 0, 2));
     }
 }
@@ -103,7 +103,7 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
 
     <div class="mm-axo">
       <span class="mm-axo-emoji">🦎</span>
-      <p>Hallo<?php if ($loggedIn): ?> <strong><?= $username ?></strong><?php endif; ?>! Ich bin <strong>Axl</strong>, dein Axolotl 🌸<br>
+      <p>Hallo<?php if ($loggedIn) { ?> <strong><?= $username ?></strong><?php } ?>! Ich bin <strong>Axl</strong>, dein Axolotl 🌸<br>
         Ich erkläre dir jede Karte — gemütlich und ohne Stress.</p>
     </div>
   </aside>
@@ -121,20 +121,20 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
         </svg>
       </button>
 
-      <?php if ($loggedIn): ?>
+      <?php if ($loggedIn) { ?>
         <div class="nav-avatar-wrap" id="avatarWrap">
           <div class="nav-avatar" id="avatarBtn" title="<?= $username ?>" aria-label="Profilbild"><?= $initials ?></div>
           <div class="avatar-dropdown" id="avatarDropdown">
             <a href="logout.php">⬡ abmelden</a>
           </div>
         </div>
-      <?php else: ?>
+      <?php } else { ?>
         <div class="nav-avatar" id="avatarBtn" aria-label="Anmelden" title="Anmelden / Registrieren">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
           </svg>
         </div>
-      <?php endif; ?>
+      <?php } ?>
     </div>
   </header>
 
@@ -204,25 +204,25 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
   </section>
 
   <!-- AUTH MODAL -->
-  <?php if (!$loggedIn): ?>
+  <?php if (!$loggedIn) { ?>
   <div class="auth-modal-bg" id="authModalBg">
     <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Anmelden oder Registrieren">
       <button class="auth-modal-close" id="authModalClose" aria-label="Schließen">×</button>
       <div class="auth-logo"><span>🦎</span> Intresting Maps</div>
 
       <div class="auth-tabs">
-        <button class="auth-tab <?= $modalOpen === 'register' ? '' : 'active' ?>" data-tab="login">anmelden</button>
-        <button class="auth-tab <?= $modalOpen === 'register' ? 'active' : '' ?>" data-tab="register">registrieren</button>
+        <button class="auth-tab <?= $modalOpen == 'register' ? '' : 'active' ?>" data-tab="login">anmelden</button>
+        <button class="auth-tab <?= $modalOpen == 'register' ? 'active' : '' ?>" data-tab="register">registrieren</button>
       </div>
 
       <!-- LOGIN PANEL -->
-      <div class="auth-panel <?= $modalOpen === 'register' ? '' : 'active' ?>" id="panel-login">
-        <?php if ($modalOpen === 'login' && $modalError): ?>
+      <div class="auth-panel <?= $modalOpen == 'register' ? '' : 'active' ?>" id="panel-login">
+        <?php if ($modalOpen == 'login' && $modalError) { ?>
           <div class="auth-msg error"><?= $modalError ?></div>
-        <?php endif; ?>
-        <?php if ($modalSuccess): ?>
+        <?php } ?>
+        <?php if ($modalSuccess) { ?>
           <div class="auth-msg success"><?= $modalSuccess ?></div>
-        <?php endif; ?>
+        <?php } ?>
         <form method="POST" action="login.php">
           <div class="auth-field">
             <label>username</label>
@@ -237,10 +237,10 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
       </div>
 
       <!-- REGISTER PANEL -->
-      <div class="auth-panel <?= $modalOpen === 'register' ? 'active' : '' ?>" id="panel-register">
-        <?php if ($modalOpen === 'register' && $modalError): ?>
+      <div class="auth-panel <?= $modalOpen == 'register' ? 'active' : '' ?>" id="panel-register">
+        <?php if ($modalOpen == 'register' && $modalError) { ?>
           <div class="auth-msg error"><?= $modalError ?></div>
-        <?php endif; ?>
+        <?php } ?>
         <form method="POST" action="register.php">
           <div class="auth-field">
             <label>username</label>
@@ -263,17 +263,17 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
       </div>
     </div>
   </div>
-  <?php endif; ?>
+  <?php } ?>
 
   <script>
     // AUTH MODAL
-    <?php if (!$loggedIn): ?>
+    <?php if (!$loggedIn) { ?>
     (function () {
-      var bg      = document.getElementById('authModalBg');
-      var closeBtn = document.getElementById('authModalClose');
-      var avatarBtn = document.getElementById('avatarBtn');
-      var tabs    = document.querySelectorAll('.auth-tab');
-      var panels  = document.querySelectorAll('.auth-panel');
+      let bg       = document.getElementById('authModalBg');
+      let closeBtn = document.getElementById('authModalClose');
+      let avatarBtn = document.getElementById('avatarBtn');
+      let tabs     = document.querySelectorAll('.auth-tab');
+      let panels   = document.querySelectorAll('.auth-panel');
 
       function openModal() {
         bg.classList.add('open');
@@ -286,37 +286,41 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
       avatarBtn.addEventListener('click', openModal);
       closeBtn.addEventListener('click', closeModal);
       bg.addEventListener('click', function(e) {
-        if (e.target === bg) {
+        if (e.target == bg) {
           closeModal();
         }
       });
       document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
+        if (e.key == 'Escape') {
           closeModal();
         }
       });
 
       tabs.forEach(function(tab) {
         tab.addEventListener('click', function() {
-          var target = this.dataset.tab;
-          tabs.forEach(function(t) { t.classList.remove('active'); });
-          panels.forEach(function(p) { p.classList.remove('active'); });
+          let target = this.dataset.tab;
+          tabs.forEach(function(t) {
+            t.classList.remove('active');
+          });
+          panels.forEach(function(p) {
+            p.classList.remove('active');
+          });
           this.classList.add('active');
           document.getElementById('panel-' + target).classList.add('active');
         });
       });
 
       // Auto-open wenn Fehler/Redirect von login.php oder register.php
-      <?php if ($modalOpen): ?>
+      <?php if ($modalOpen) { ?>
       openModal();
-      <?php endif; ?>
+      <?php } ?>
     })();
-    <?php else: ?>
+    <?php } else { ?>
     // Logged-in: Avatar-Dropdown
     (function () {
-      var wrap    = document.getElementById('avatarWrap');
-      var btn     = document.getElementById('avatarBtn');
-      var dropdown = document.getElementById('avatarDropdown');
+      let wrap     = document.getElementById('avatarWrap');
+      let btn      = document.getElementById('avatarBtn');
+      let dropdown = document.getElementById('avatarDropdown');
 
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -327,11 +331,11 @@ $modalSuccess = isset($_GET["success"]) ? htmlspecialchars($_GET["success"], ENT
         dropdown.classList.remove('open');
       });
     })();
-    <?php endif; ?>
+    <?php } ?>
   </script>
 
   <script>
-    var IS_LOGGED_IN = <?= $loggedIn ? 'true' : 'false' ?>;
+    window.IS_LOGGED_IN = <?= $loggedIn ? 'true' : 'false' ?>;
   </script>
   <script src="main.js"></script>
 </body>

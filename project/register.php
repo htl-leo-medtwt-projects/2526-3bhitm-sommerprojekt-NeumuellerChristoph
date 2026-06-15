@@ -4,7 +4,7 @@
 session_start();
 
 // wenn jemand schon eingeloggt ist hat er hier nichts verloren
-if (isset($_SESSION["login"]) && $_SESSION["login"] === 1) {
+if (isset($_SESSION["login"]) && $_SESSION["login"] == 1) {
     header("Location: index.php");
     exit;
 }
@@ -23,7 +23,7 @@ if (!empty($_POST["submit"])) {
     $passwort2 = $conn->real_escape_string($_POST["passwort2"]);
 
     // prüfen ob beide passwörter gleich sind
-    if ($passwort1 !== $passwort2) {
+    if ($passwort1 != $passwort2) {
         $error = "Passwörter stimmen nicht überein.";
 
     // prüfen ob benutzername schon vergeben ist

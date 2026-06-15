@@ -4,7 +4,7 @@
 session_start();
 
 // schon eingeloggt, kein grund hier zu sein
-if (isset($_SESSION["login"]) && $_SESSION["login"] === 1) {
+if (isset($_SESSION["login"]) && $_SESSION["login"] == 1) {
     header("Location: index.php");
     exit;
 }
@@ -25,7 +25,7 @@ if (!empty($_POST["submit"])) {
     $stmt->execute();
     $res = $stmt->get_result();
 
-    if ($res->num_rows === 1) {
+    if ($res->num_rows == 1) {
         $user = $res->fetch_assoc();
 
         // password_verify vergleicht das eingegebene passwort mit dem gespeicherten hash
@@ -78,13 +78,13 @@ exit;
       <div class="auth-logo"><span>🦎</span> Intresting Maps</div>
       <p class="auth-sub">anmelden</p>
 
-      <?php if ($error): ?>
+      <?php if ($error) { ?>
         <div class="auth-error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
-      <?php endif; ?>
+      <?php } ?>
 
-      <?php if ($success): ?>
+      <?php if ($success) { ?>
         <div class="auth-success"><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></div>
-      <?php endif; ?>
+      <?php } ?>
 
       <form method="POST" action="login.php">
         <div class="auth-field">

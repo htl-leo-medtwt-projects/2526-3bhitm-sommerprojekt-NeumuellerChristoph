@@ -1,14 +1,14 @@
 <?php
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+$istEingeloggt = !empty($_SESSION["login"]) && $_SESSION["login"] === 1;
+$hatBenutzer = !empty($_SESSION["user"]);
+
 // check login
-if (
-    empty($_SESSION["login"]) ||
-    $_SESSION["login"] !== 1  ||
-    empty($_SESSION["user"])
-) {
+if (!$istEingeloggt || !$hatBenutzer) {
     // Nicht eingeloggt
     header("Location: login.php");
     exit;

@@ -1,15 +1,13 @@
 <?php
 
 // KOMMENTAR SPEICHERN
-// dieser endpunkt wird vom javascript per fetch aufgerufen wenn jemand einen kommentar abschickt
-// die daten kommen als json rein, deshalb lesen wir php://input statt $_POST
+// fetch-Aufruf vom JS, Daten kommen als JSON über php://input
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
 
 // LOGIN CHECK
-// wenn jemand nicht eingeloggt ist sollte er hier gar nicht ankommen,
-// aber sicher ist sicher
+// Sicherheitsnetz falls jemand direkt aufruft
 if (!isset($_SESSION["login"]) || $_SESSION["login"] !== 1) {
     http_response_code(401);
     echo json_encode(['error' => 'nicht eingeloggt']);
@@ -18,11 +16,11 @@ if (!isset($_SESSION["login"]) || $_SESSION["login"] !== 1) {
 
 
 // DATEN AUS DEM REQUEST LESEN
-// javascript schickt die daten als json body, deshalb json_decode
+// JSON body dekodieren
 $rawInput = file_get_contents('php://input');
 $data     = json_decode($rawInput, true);
 
-// map_id und kommentar raus holen, falls was fehlt auf 0 bzw leer setzen
+// map_id und comment auslesen, Fallback auf 0 bzw. leer
 if (isset($data['map_id'])) {
     $map_id = (int) $data['map_id'];
 } else {
@@ -35,7 +33,7 @@ if (isset($data['comment'])) {
     $comment = '';
 }
 
-// kurz prüfen ob die daten überhaupt sinnvoll sind
+// Validierung
 if ($map_id <= 0 || $comment === '') {
     http_response_code(400);
     echo json_encode(['error' => 'ungültige daten']);
@@ -53,7 +51,7 @@ $stmt->bind_param("iis", $map_id, $user_id, $comment);
 $success = $stmt->execute();
 
 if ($success) {
-    // den neuen kommentar direkt zurückschicken damit js ihn gleich anzeigen kann
+    // neuen Kommentar zurückschicken damit JS ihn direkt anzeigen kann
     $newComment = [
         'id'         => $conn->insert_id,
         'username'   => $_SESSION["user"]["username"],
