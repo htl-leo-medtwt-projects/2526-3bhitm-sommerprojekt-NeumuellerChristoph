@@ -1,14 +1,13 @@
-﻿// GLOBALER ZUSTAND
+// GLOBALER ZUSTAND
 // hier merken wir uns alles was die app gerade weiß
 let currentIdx   = 0;       // welche karte gerade sichtbar ist (index im array)
 let liked        = false;   // ob die aktuelle karte geliked wurde
 let commentOpen  = false;   // ob das kommentarpanel gerade auf ist
 let menuOpen     = false;   // ob das entdecken-menü offen ist
-let axoTimers    = {};      // laufende timer für die axl-bubble (pro karten-id)
+let axoTimer     = null;    // laufender timer für die axl-bubble (immer nur einer gleichzeitig)
 let axoShown     = {};      // merkt welche karten axl schon gezeigt haben
 let activeFilter = 'week';  // welcher sortier-filter gerade aktiv ist
 let hiddenTags   = [];      // tags die der user im menü ausgeblendet hat
-let feedObserver = null;    // der intersection observer der das scrollen verfolgt
 let appCards     = [];      // alle geladenen karten, wird nach dem api-call befüllt
 let commentsLoaded = {};    // welche karten schon ihre kommentare geladen haben
 
@@ -36,52 +35,54 @@ const fullscreenBtn   = document.querySelector('.sb-special');
 
 
 // KARTEN AUS DER DATENBANK LADEN
-// schickt eine anfrage an api.php und baut daraus die karten-objekte
-function loadCards(callback) {
+// async/await lässt den code wie normalen code aussehen, wartet aber auf die antwort vom server
+async function loadCards() {
 
   // ladeanimation im feed anzeigen während wir warten
   feed.innerHTML = '<div class="card-section"><div class="feed-empty"><span class="feed-empty-emoji">🦎</span><p>Karten werden geladen...</p></div></div>';
 
-  fetch('api.php?action=maps')
-    .then(function(res) {
-      if (!res.ok) {
-        throw new Error('server hat fehler zurückgegeben');
-      }
-      return res.json();
-    })
-    .then(function(data) {
+  try {
+    let response = await fetch('api.php?action=maps');
 
-      // die felder aus der datenbank haben andere namen als wir intern verwenden
-      // hier bauen wir aus jedem datenbank-eintrag ein karten-objekt
-      let cards = [];
+    if (!response.ok) {
+      throw new Error('server hat fehler zurückgegeben');
+    }
 
-      for (let i = 0; i < data.length; i++) {
-        let m = data[i];
+    let data = await response.json();
 
-        let card = {
-          id:        String(m.id),
-          title:     m.title,
-          source:    m.media_url   || '',
-          tag:       m.topic       || '',
-          label:     (m.topic      || '').toUpperCase(),
-          likes:     String(m.likes || 0),
-          likesNum:  parseInt(m.likes) || 0,
-          // created_at aus der db nehmen damit die sortierung stimmt
-          dateAdded: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
-          image:     m.image_url   || '',
-          comments:  [],
-          axo:       m.description || '',
-        };
+    // die felder aus der datenbank haben andere namen als wir intern verwenden
+    // hier bauen wir aus jedem datenbank-eintrag ein karten-objekt
+    let cards = [];
 
-        cards.push(card);
-      }
+    for (let i = 0; i < data.length; i++) {
+      let m = data[i];
 
-      callback(cards);
-    })
-    .catch(function() {
-      // wenn die api nicht antwortet, fehlermeldung im feed
-      feed.innerHTML = '<div class="card-section"><div class="feed-empty"><span class="feed-empty-emoji">🦎</span><p>Datenbank nicht erreichbar.</p><p>Bitte sicherstellen dass der Server läuft.</p></div></div>';
-    });
+      let card = {
+        id:        String(m.id),
+        title:     m.title,
+        source:    m.media_url   || '',
+        tag:       m.topic       || '',
+        label:     (m.topic      || '').toUpperCase(),
+        likes:     String(m.likes || 0),
+        likesNum:  parseInt(m.likes) || 0,
+        // created_at aus der db nehmen damit die sortierung stimmt
+        dateAdded: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+        image:     m.image_url   || '',
+        comments:  [],
+        axo:       m.description || '',
+      };
+
+      cards.push(card);
+    }
+
+    appCards = cards;
+    buildTagButtons();
+    buildFeed();
+
+  } catch(e) {
+    // wenn die api nicht antwortet, fehlermeldung im feed
+    feed.innerHTML = '<div class="card-section"><div class="feed-empty"><span class="feed-empty-emoji">🦎</span><p>Datenbank nicht erreichbar.</p><p>Bitte sicherstellen dass der Server läuft.</p></div></div>';
+  }
 }
 
 
@@ -106,6 +107,29 @@ function buildTagButtons() {
     let btn = document.createElement('button');
     btn.className   = 'mm-tag active';
     btn.textContent = tags[j];
+
+    // klick-listener direkt auf jeden button, kein event-delegation nötig
+    btn.addEventListener('click', function() {
+      btn.classList.toggle('active');
+      let tagName = btn.textContent.trim();
+      let pos     = hiddenTags.indexOf(tagName);
+
+      if (pos !== -1) {
+        // tag aus der liste entfernen: neues array ohne diesen eintrag bauen
+        let newHiddenTags = [];
+        for (let k = 0; k < hiddenTags.length; k++) {
+          if (hiddenTags[k] !== tagName) {
+            newHiddenTags.push(hiddenTags[k]);
+          }
+        }
+        hiddenTags = newHiddenTags;
+      } else {
+        hiddenTags.push(tagName);
+      }
+
+      buildFeed();
+    });
+
     mmTagsContainer.appendChild(btn);
   }
 }
@@ -116,8 +140,11 @@ function buildTagButtons() {
 // ausgeblendete tags werden rausgefiltert, dann wird je nach filter sortiert
 function getFilteredCards() {
 
-  // erstmal alle karten kopieren damit wir das original nicht verändern
-  let cards = appCards.slice();
+  // manuelles kopieren damit wir das original nicht verändern
+  let cards = [];
+  for (let i = 0; i < appCards.length; i++) {
+    cards.push(appCards[i]);
+  }
 
   // ausgeblendete tags rauswerfen
   if (hiddenTags.length > 0) {
@@ -133,7 +160,7 @@ function getFilteredCards() {
   // je nach aktivem filter sortieren
   if (activeFilter === 'week') {
     // nur karten der letzten 7 tage, dann nach likes
-    let weekAgo = Date.now() - 1000 * 60 * 60 * 24 * 7;
+    let weekAgo = Date.now() - 1000 * 60 * 60 * 24 * 7; // * Millisekunden: 1000ms × 60s × 60min × 24h × 7 Tage
     let thisWeek = [];
     for (let j = 0; j < cards.length; j++) {
       if (cards[j].dateAdded >= weekAgo) {
@@ -173,8 +200,9 @@ function buildHeatmap(card) {
 // bild, axl-bubble und footer zusammensetzen
 function buildCard(card) {
   let section = document.createElement('div');
-  section.className    = 'card-section';
-  section.dataset.id   = card.id;
+  section.className  = 'card-section';
+  section.dataset.id = card.id;
+  section.id         = 'section-' + card.id; // damit wir sie später per id direkt finden können
 
   section.innerHTML =
     '<div class="card">'
@@ -204,8 +232,13 @@ function buildCard(card) {
 // feed leeren und mit den aktuell gefilterten karten neu befüllen
 function buildFeed() {
   feed.innerHTML = '';
-  axoShown  = {};
-  axoTimers = {};
+  axoShown = {};
+
+  // laufenden axl-timer abbrechen da der feed neu gebaut wird
+  if (axoTimer !== null) {
+    clearTimeout(axoTimer);
+    axoTimer = null;
+  }
 
   let cards = getFilteredCards();
 
@@ -218,7 +251,6 @@ function buildFeed() {
     feed.appendChild(buildCard(cards[i]));
   }
 
-  setupObserver();
   updateSidebar(0);
   currentIdx = 0;
 
@@ -226,6 +258,59 @@ function buildFeed() {
   setTimeout(function() {
     scheduleAxl(cards[0].id);
   }, 100);
+}
+
+
+// WELCHE KARTE GERADE SICHTBAR IST PRÜFEN
+// wird beim scrollen aufgerufen, schaut per getBoundingClientRect welche karte im sichtbereich liegt
+function checkVisibleCard() {
+  let sections = feed.querySelectorAll('.card-section');
+  let cards    = getFilteredCards();
+  let feedRect = feed.getBoundingClientRect();
+  let foundVisible = false;
+
+  for (let i = 0; i < sections.length; i++) {
+    let rect = sections[i].getBoundingClientRect();
+
+    // wie viele pixel der karte sind im sichtbaren bereich des feeds
+    let visibleTop    = Math.max(rect.top, feedRect.top);
+    let visibleBottom = Math.min(rect.bottom, feedRect.bottom);
+    let visibleHeight = visibleBottom - visibleTop;
+
+    // wenn die karte zu mindestens 55% sichtbar ist
+    if (visibleHeight > 0 && visibleHeight / rect.height >= 0.55) {
+      foundVisible = true;
+
+      let id  = sections[i].dataset.id;
+      let idx = -1;
+
+      for (let j = 0; j < cards.length; j++) {
+        if (cards[j].id === id) {
+          idx = j;
+          break;
+        }
+      }
+
+      if (idx !== -1 && idx !== currentIdx) {
+        currentIdx = idx;
+        updateSidebar(idx);
+        scheduleAxl(id);
+        preloadComments(id);
+        if (commentOpen) {
+          renderComments();
+          commentCount.textContent = cards[idx].comments.length;
+        }
+      }
+
+      break; // nur eine karte kann gleichzeitig 55% sichtbar sein
+    }
+  }
+
+  // wenn gerade keine karte zu 55% sichtbar ist, timer stoppen
+  if (!foundVisible && axoTimer !== null) {
+    clearTimeout(axoTimer);
+    axoTimer = null;
+  }
 }
 
 
@@ -253,87 +338,29 @@ function updateSidebar(idx) {
 // wenn der user vorher weiterschrollt wird der timer abgebrochen
 function scheduleAxl(cardId) {
 
-  // timer aller anderen karten stoppen
-  for (let id in axoTimers) {
-    if (id !== cardId) {
-      clearTimeout(axoTimers[id]);
-      delete axoTimers[id];
-    }
+  // laufenden timer stoppen bevor wir einen neuen starten
+  if (axoTimer !== null) {
+    clearTimeout(axoTimer);
+    axoTimer = null;
   }
 
   // jede karte bekommt axl nur einmal angezeigt
   if (!axoShown[cardId]) {
-    axoTimers[cardId] = setTimeout(function() {
-      let bubble = document.getElementById('axo-' + cardId);
+    axoTimer = setTimeout(function() {
+      let bubble  = document.getElementById('axo-' + cardId);
+      let section = document.getElementById('section-' + cardId);
 
       if (bubble) {
         bubble.classList.add('axo-enter');
-
-        let section = bubble.closest('.card-section');
-        if (section) {
-          section.classList.add('axl-visible');
-        }
-
-        axoShown[cardId] = true;
-        delete axoTimers[cardId];
       }
+
+      if (section) {
+        section.classList.add('axl-visible');
+      }
+
+      axoShown[cardId] = true;
+      axoTimer = null;
     }, 2200);
-  }
-}
-
-// AXL TIMER ABBRECHEN
-// z.b. wenn der user zur nächsten karte scrollt
-function cancelAxl(cardId) {
-  if (axoTimers[cardId]) {
-    clearTimeout(axoTimers[cardId]);
-    delete axoTimers[cardId];
-  }
-}
-
-
-// SCROLL OBSERVER
-// schaut welche karte gerade zu mindestens 55% sichtbar ist
-// sobald eine karte ins bild kommt: sidebar + axl + kommentare vorladen
-function setupObserver() {
-  if (feedObserver) {
-    feedObserver.disconnect();
-  }
-
-  let sections = feed.querySelectorAll('.card-section');
-  let cards    = getFilteredCards();
-
-  feedObserver = new IntersectionObserver(function(entries) {
-    for (let i = 0; i < entries.length; i++) {
-      let entry = entries[i];
-      let id    = entry.target.dataset.id;
-      let idx   = -1;
-
-      // index der karte im array finden
-      for (let j = 0; j < cards.length; j++) {
-        if (cards[j].id === id) {
-          idx = j;
-          break;
-        }
-      }
-
-      if (entry.isIntersecting) {
-        currentIdx = idx;
-        updateSidebar(idx);
-        scheduleAxl(id);
-        // kommentare im hintergrund schon vorladen damit sie sofort da sind
-        preloadComments(id);
-        if (commentOpen) {
-          renderComments();
-          commentCount.textContent = cards[idx].comments.length;
-        }
-      } else {
-        cancelAxl(id);
-      }
-    }
-  }, { threshold: 0.55 });
-
-  for (let k = 0; k < sections.length; k++) {
-    feedObserver.observe(sections[k]);
   }
 }
 
@@ -341,9 +368,9 @@ function setupObserver() {
 // LIKE BUTTON
 function toggleLike() {
   liked = !liked;
-  likeBtn.classList.toggle('liked', liked);
 
   if (liked) {
+    likeBtn.classList.add('liked');
     likeIcon.style.stroke       = 'var(--moss)';
     likeIcon.style.fill         = 'rgba(110,128,80,0.15)';
     likeBtn.style.transform     = 'scale(1.28) rotate(-8deg)';
@@ -351,6 +378,7 @@ function toggleLike() {
       likeBtn.style.transform = '';
     }, 200);
   } else {
+    likeBtn.classList.remove('liked');
     likeIcon.style.fill   = 'none';
     likeIcon.style.stroke = 'currentColor';
   }
@@ -359,7 +387,7 @@ function toggleLike() {
 
 // KOMMENTARE VORLADEN
 // wird beim scrollen aufgerufen damit die kommentare schon da sind wenn man das panel öffnet
-function preloadComments(cardId) {
+async function preloadComments(cardId) {
 
   // nicht nochmal laden wenn wir sie schon haben
   if (commentsLoaded[cardId]) {
@@ -368,46 +396,43 @@ function preloadComments(cardId) {
 
   commentsLoaded[cardId] = true;
 
-  fetch('api.php?action=comments&map_id=' + cardId)
-    .then(function(res) {
-      return res.json();
-    })
-    .then(function(data) {
-      // karte im array finden und kommentare eintragen
-      let cards = getFilteredCards();
-      let card  = null;
+  let response = await fetch('api.php?action=comments&map_id=' + cardId);
+  let data     = await response.json();
 
-      for (let i = 0; i < cards.length; i++) {
-        if (cards[i].id === cardId) {
-          card = cards[i];
-          break;
-        }
+  // karte im array finden und kommentare eintragen
+  let cards = getFilteredCards();
+  let card  = null;
+
+  for (let i = 0; i < cards.length; i++) {
+    if (cards[i].id === cardId) {
+      card = cards[i];
+      break;
+    }
+  }
+
+  if (!card) {
+    return;
+  }
+
+  card.comments = data;
+
+  // wenn das panel gerade offen ist und diese karte sichtbar ist, gleich rendern
+  if (commentOpen && cards[currentIdx] && cards[currentIdx].id === cardId) {
+    renderComments();
+    commentCount.textContent = data.length;
+  } else {
+    // sonst nur die zahl in der sidebar aktualisieren
+    let idx = -1;
+    for (let j = 0; j < cards.length; j++) {
+      if (cards[j].id === cardId) {
+        idx = j;
+        break;
       }
-
-      if (!card) {
-        return;
-      }
-
-      card.comments = data;
-
-      // wenn das panel gerade offen ist und diese karte sichtbar ist, gleich rendern
-      if (commentOpen && cards[currentIdx] && cards[currentIdx].id === cardId) {
-        renderComments();
-        commentCount.textContent = data.length;
-      } else {
-        // sonst nur die zahl in der sidebar aktualisieren
-        let idx = -1;
-        for (let j = 0; j < cards.length; j++) {
-          if (cards[j].id === cardId) {
-            idx = j;
-            break;
-          }
-        }
-        if (idx >= 0) {
-          updateSidebar(idx);
-        }
-      }
-    });
+    }
+    if (idx >= 0) {
+      updateSidebar(idx);
+    }
+  }
 }
 
 // KOMMENTARPANEL ÖFFNEN
@@ -491,7 +516,7 @@ function renderComments() {
 
 // KOMMENTAR ABSCHICKEN
 // wenn nicht eingeloggt kommt das login-modal, sonst wird der kommentar gespeichert
-function sendComment() {
+async function sendComment() {
 
   if (!IS_LOGGED_IN) {
     openAuthModal();
@@ -511,28 +536,25 @@ function sendComment() {
   let mapId = parseInt(cards[currentIdx].id);
 
   // kommentar per fetch an comment_save.php schicken
-  fetch('comment_save.php', {
+  let response = await fetch('comment_save.php', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({ map_id: mapId, comment: val }),
-  })
-    .then(function(res) {
-      return res.json();
-    })
-    .then(function(saved) {
-      if (saved.error) {
-        return;
-      }
+  });
 
-      // eingabefeld leeren und neuen kommentar direkt in die liste packen
-      cpInput.value = '';
-      cards[currentIdx].comments.push(saved);
-      renderComments();
-      commentCount.textContent = cards[currentIdx].comments.length;
+  let saved = await response.json();
 
-      // nach unten scrollen damit der neue kommentar sichtbar ist
-      cpList.scrollTop = cpList.scrollHeight;
-    });
+  if (saved.error) {
+    return;
+  }
+
+  // eingabefeld leeren und neuen kommentar direkt in die liste packen
+  cpInput.value = '';
+  cards[currentIdx].comments.push(saved);
+  renderComments();
+  commentCount.textContent = cards[currentIdx].comments.length;
+
+  cpList.scrollTop = cpList.scrollHeight; // * scrollHeight = gesamte Höhe des Inhalts, scrollTop = aktuelle Position → setzt Scroll ans Ende
 }
 
 // LOGIN MODAL ÖFFNEN
@@ -575,9 +597,9 @@ function toggleMenu() {
 // VOLLBILD
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(function() {});
+    document.documentElement.requestFullscreen().catch(function() {}); // * .catch() schluckt den Fehler falls der Browser Vollbild verweigert
   } else {
-    document.exitFullscreen().catch(function() {});
+    document.exitFullscreen().catch(function() {}); // * gleiches Prinzip beim Beenden
   }
 }
 
@@ -637,32 +659,14 @@ fullscreenBtn.addEventListener('click', toggleFullscreen);
 // aktiven filter wechseln und feed neu bauen
 mmFilters.forEach(function(btn) {
   btn.addEventListener('click', function() {
-    mmFilters.forEach(function(b) { b.classList.remove('active'); });
+    mmFilters.forEach(function(b) {
+      b.classList.remove('active');
+    });
     this.classList.add('active');
     activeFilter = this.dataset.filter;
     closeMenu();
     buildFeed();
   });
-});
-
-// tag ein- oder ausblenden
-mmTagsContainer.addEventListener('click', function(e) {
-  let btn = e.target.closest('.mm-tag');
-  if (!btn) {
-    return;
-  }
-
-  btn.classList.toggle('active');
-  let tagName = btn.textContent.trim();
-  let pos     = hiddenTags.indexOf(tagName);
-
-  if (pos !== -1) {
-    hiddenTags.splice(pos, 1);
-  } else {
-    hiddenTags.push(tagName);
-  }
-
-  buildFeed();
 });
 
 // escape schließt offene panels
@@ -678,13 +682,10 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+// scroll-tracking einmalig aufsetzen
+feed.addEventListener('scroll', checkVisibleCard);
+
 
 // START
-// erst daten laden, dann den feed bauen
-loadCards(function(cards) {
-  appCards = cards;
-  buildTagButtons();
-  buildFeed();
-});
-
-
+// daten laden, danach wird buildFeed automatisch aufgerufen
+loadCards();
